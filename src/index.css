@@ -1,0 +1,123 @@
+*:focus {
+	outline: none;
+}
+
+html, body {
+	/*font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;*/
+	font-family: monospace;
+	font-size: 12px;
+	height: 100%;
+	margin: 0;
+}
+
+#content {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+#toolbar-pane {
+	overflow: hidden;
+	background-color: #333;
+}
+
+#toolbar-pane a {
+	float: left;
+	color: #f2f2f2;
+	text-align: center;
+	padding: 10px 10px;
+	text-decoration: none;
+	font-size: 14px;
+}
+
+#toolbar-pane a:hover {
+	background-color: #ddd;
+	color: black;
+}
+
+#editor-pane {
+	background-color: white;
+}
+
+#editor {
+	width: 100%;
+	height: 100%;
+	border-style: none;
+	font-size: 12px;
+}
+
+#table-pane {
+	background-color: white;
+	overflow-y: auto;
+}
+
+.gutter {
+	background-color: #eee; 
+	background-repeat: no-repeat;
+	background-position: 50%;
+}
+ 
+.gutter.gutter-vertical {
+	background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=');
+	cursor: row-resize;
+}
+
+.gutter.gutter-horizontal {
+	background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+	cursor: col-resize;
+}
+
+.table {
+	border-collapse: collapse;
+	/*
+	margin: 25px 0;
+	font-size: 0.9em;
+	font-family: sans-serif;
+	min-width: 400px;
+	box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+	*/
+}
+
+.table thead tr {
+	background-color: darkgrey;
+	color: black;
+	text-align: left;
+}
+
+.table th,
+.table td {
+	/*
+	padding: 12px 15px;
+	*/
+	padding: 2px;
+}
+
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+.table tbody tr:nth-of-type(even) {
+	background-color: #f3f3f3;
+}
+
+/*
+.table tbody tr:last-of-type {
+	border-bottom: 2px solid #009879;
+}
+*/
+
+.table tbody tr.active-row {
+	font-weight: bold;
+	color: #009879;
+}
+
+.table td>div {
+	width: auto;
+	min-width: 0;
+	max-width: 200px;
+	display: inline-block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
