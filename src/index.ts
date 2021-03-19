@@ -1,5 +1,6 @@
 import {app, BrowserWindow} from 'electron';
 import {isDebug} from './utilities';
+import {loadSettings, saveSettings} from './settings';
 import * as path from 'path';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -7,34 +8,54 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 	app.quit();
 }
 
-const createWindow = (): void => {
-	const preloadFilename = path.resolve(__dirname, 'renderer.js');
-	const htmlFilename = path.resolve(__dirname, '../src/index.html');
-	/*
-	console.log(`__dirname="${__dirname}"`);
-	console.log(`preloadFilename="${preloadFilename}"`);
-	console.log(`htmlFilename="${htmlFilename}"`);
-	*/
+async function createWindow(): Promise<void> {
+	// load settings
+	const settings = await loadSettings();
 	
 	// Create the browser window.
 	const mainWindow = new BrowserWindow({
-		height: 600,
-		width: 800,
+		height: settings.windowStatus.height,
+		width: settings.windowStatus.width,
+		x: settings.windowStatus.x,
+		y: settings.windowStatus.y,
 		webPreferences: {
 			nodeIntegration: true,
 			enableRemoteModule: true,
-			preload: preloadFilename,
+			preload: path.resolve(__dirname, 'renderer.js'),
 		}
 	});
 
+	if (settings.windowStatus.isMaximized) {
+		mainWindow.maximize();
+	}
+
 	// and load the index.html of the app.
-	mainWindow.loadFile(htmlFilename);
+	mainWindow.loadFile(path.resolve(__dirname, '../src/index.html'));
 
 	// Open the DevTools.
 	if (isDebug()) {
 		mainWindow.webContents.openDevTools();
 	}
-};
+
+	async function saveState(): Promise<void> {
+		const isMaximized = mainWindow.isMaximized();
+		const bounds = mainWindow.getBounds();
+		const windowStatus = {
+			height: bounds.height,
+			width: bounds.width,
+			x: bounds.x,
+			y: bounds.y,
+			isMaximized,
+		};
+
+		await saveSettings({windowStatus});
+	}
+
+	// keep track of the window status
+	mainWindow.on('resize', saveState);
+	mainWindow.on('move', saveState);
+	mainWindow.on('close', saveState);
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
