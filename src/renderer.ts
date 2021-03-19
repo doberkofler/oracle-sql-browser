@@ -112,7 +112,7 @@ async function connectWithDatabase(database: Database, connectString: string): P
 */
 async function render(): Promise<void> {
 	// check for the window close
-	window.addEventListener('unload', function(event) {
+	window.addEventListener('unload', function() {
 		if (database.isConnected()) {
 			database.disconnect();
 		}		
@@ -175,6 +175,7 @@ async function render(): Promise<void> {
 	// connect
 	if (settings.connectString.length > 0) {
 		const result = await connectWithDatabase(database, settings.connectString);
+		renderTablePane(result);
 	}
 }
 
