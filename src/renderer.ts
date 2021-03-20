@@ -27,6 +27,7 @@
  */
 
 import {remote} from 'electron';
+import {onDomReady, getElementById} from './dom';
 import debounce from 'lodash.debounce';
 import {loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
@@ -128,10 +129,7 @@ async function render(): Promise<void> {
 	});
 
 	// get DOM elements
-	const toolbarElement = document.getElementById('toolbar-pane');
-	if (toolbarElement === null) {
-		throw new Error('toolbar-pane not found');
-	}
+	const toolbarElement = getElementById('toolbar-pane');
 	const editorElement = getEditorElement();
 
 	// set editor content
@@ -183,25 +181,16 @@ async function render(): Promise<void> {
 *	Render the table pane
 */
 function renderTablePane(html: string) {
-	const tableElement = document.getElementById('table-pane');
-	if (tableElement === null) {
-		throw new Error('table-pane not found');
-	}
+	const el = getElementById('table-pane');
 
-	tableElement.innerHTML = html;
+	el.innerHTML = html;
 }
 
 /*
 *	Get the editor DOM element
 */
 function getEditorElement(): HTMLFormElement {
-	const el = document.getElementById('editor');
-
-	if (el === null) {
-		throw new Error('editor not found');
-	}
-
-	return el as HTMLFormElement;
+	return getElementById('editor') as HTMLFormElement;
 }
 
-document.addEventListener('DOMContentLoaded', render);
+onDomReady(render);

@@ -37,7 +37,7 @@ async function createWindow(): Promise<void> {
 		mainWindow.webContents.openDevTools();
 	}
 
-	async function saveState(): Promise<void> {
+	async function saveWindowStatus(): Promise<void> {
 		const isMaximized = mainWindow.isMaximized();
 		const bounds = mainWindow.getBounds();
 		const windowStatus = {
@@ -52,9 +52,9 @@ async function createWindow(): Promise<void> {
 	}
 
 	// keep track of the window status
-	mainWindow.on('resize', saveState);
-	mainWindow.on('move', saveState);
-	mainWindow.on('close', saveState);
+	mainWindow.on('resize', saveWindowStatus);
+	mainWindow.on('move', saveWindowStatus);
+	mainWindow.on('close', saveWindowStatus);
 }
 
 // This method will be called when Electron has finished

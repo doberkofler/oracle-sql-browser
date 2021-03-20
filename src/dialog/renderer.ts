@@ -1,4 +1,5 @@
 import {ipcRenderer} from 'electron';
+import {onDomReady, getElementById} from '../dom';
 
 function promptRegister(): void {
 	const promptId = document.location.hash.replace('#', '');
@@ -15,33 +16,22 @@ function promptRegister(): void {
 			reportError(promptId, error);
 		});
 	}
+
+	const dataElement = getElementById('data') as HTMLFormElement;
 	
-	const submitElement = document.getElementById('form');
-	if (submitElement) {
-		submitElement.addEventListener('submit', () => {
-			const dataElement = document.getElementById('data') as HTMLFormElement;
-			if (dataElement) {
-				ipcRenderer.sendSync('prompt-post-data:' + promptId, dataElement.value);
-			}
-		});
-	}
+	getElementById('form').addEventListener('submit', () => {
+		ipcRenderer.sendSync('prompt-post-data:' + promptId, dataElement.value);
+	});
 
-	const cancelElement = document.getElementById('cancel');
-	if (cancelElement) {
-		cancelElement.addEventListener('click', () => {
-			ipcRenderer.sendSync('prompt-post-data:' + promptId, null);
-		});
-	}
+	getElementById('cancel').addEventListener('click', () => {
+		ipcRenderer.sendSync('prompt-post-data:' + promptId, null);
+	});
 
-
-	const dataElement = document.getElementById('data') as HTMLFormElement;
-	if (dataElement) {
-		if (typeof connectString === 'string' && connectString.length > 0) {
-			dataElement.value = connectString;
-		}
-		dataElement.focus();
-		dataElement.select();
+	if (typeof connectString === 'string' && connectString.length > 0) {
+		dataElement.value = connectString;
 	}
+	dataElement.focus();
+	dataElement.select();
 }
 
 function reportError(id: string, error: any): void { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -62,4 +52,4 @@ function reportError(id: string, error: any): void { // eslint-disable-line @typ
 	}
 }
 
-document.addEventListener('DOMContentLoaded', promptRegister, false);
+onDomReady(promptRegister);
