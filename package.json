@@ -1,7 +1,7 @@
 {
   "name": "oracle-sql-browser",
   "productName": "oracle-sql-browser",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Oracle SQL Browser",
   "main": "dist/index.js",
   "scripts": {

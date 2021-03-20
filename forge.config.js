@@ -2,6 +2,9 @@ const path = require('path'); // eslint-disable-line @typescript-eslint/no-var-r
 
 module.exports = {
 	packagerConfig: {
+		name: 'Oracle SQL Browser',
+		productName: 'Oracle SQL Browser',
+		executableName: 'Oracle SQL Browser',
 		extraResource: path.resolve('./instantclient_19_8'),
 	},
 	makers: [
