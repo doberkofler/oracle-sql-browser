@@ -17,3 +17,16 @@ export function getElementById(id: string): HTMLElement {
 
 	return el;
 }
+
+/*
+*	Get a DOM element by query selector
+*/
+export function querySelector(selector: string): HTMLElement {
+	const el = document.querySelector(selector);
+
+	if (el === null || !(el instanceof HTMLElement)) {
+		throw new Error(`No element with selector "${selector}" found`);
+	}
+
+	return el;
+}

@@ -1,3 +1,5 @@
+import {app, remote} from 'electron';
+
 export function isDebug(): boolean {
-	return process.env.npm_lifecycle_event === 'start';
+	return app ? !app.isPackaged : !remote.app.isPackaged;
 }

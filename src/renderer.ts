@@ -27,7 +27,7 @@
  */
 
 import {remote} from 'electron';
-import {onDomReady, getElementById} from './dom';
+import {onDomReady, getElementById, querySelector} from './dom';
 import debounce from 'lodash.debounce';
 import {loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
@@ -35,51 +35,50 @@ import Split from 'split.js';
 import {Database} from './database';
 import {runStatement} from './runStatement';
 
+import type {settingsType} from './settings';
+
+type stateType = {
+	settings: settingsType,
+	pageId: number,
+};
+
+const saveSettingsDebounced = debounce(saveSettings, 5 * 1000);
 const database = new Database();
 
 /*
 *	Execute the "connect" command
 */
-async function cmdConnect(database: Database, connectString: string): Promise<void> {
+async function cmdConnect(database: Database, state: stateType): Promise<void> {
 	// prompt for a connection string
 	const currentWindow = remote.getCurrentWindow();
-	connectString = await createDialog(currentWindow, connectString);
-	if (connectString === null) {
+	state.settings.connectString = await createDialog(currentWindow, state.settings.connectString);
+	if (state.settings.connectString === null) {
 		return;
 	}
  
 	// connect
-	const result = await connectWithDatabase(database, connectString);
-	renderTablePane(result);
+	const result = await connectWithDatabase(database, state.settings.connectString);
+	getTableElement(state.pageId).innerHTML = result;
 
 	// set configuration settings
-	await saveSettings({connectString});
+	await saveSettings({connectString: state.settings.connectString});
 }
  
 /*
 *	Execute the "run" command
 */
-async function cmdRun(database: Database, statement: string): Promise<void> {
-	cmdSaveEditor(statement);
-
-	const html = await runStatement(database, statement);
-	renderTablePane(html);
+async function cmdRun(database: Database, state: stateType): Promise<void> {
+	const html = await runStatement(database, state.settings.pages[state.pageId].statement);
+	getTableElement(state.pageId).innerHTML = html;
 }
  
 /*
 *	Execute the "clean" command
 */
-function cmdClean(): void {
-	getEditorElement().value = '';
+function cmdClean(state: stateType): void {
+	state.settings.pages[state.pageId].statement = '';
+	getEditorElement(state.pageId).value = '';
 }
-
-/*
-*	Execute the "save editor" command
-*/
-async function cmdSaveEditor(statement: string): Promise<void> {
-	await saveSettings({statement});
-}
-const cmdSaveEditorDebounced = debounce(cmdSaveEditor, 5 * 1000);
 
 /*
 *	Connect with the database
@@ -120,21 +119,17 @@ async function render(): Promise<void> {
 	});
 
 	// get configuration settings
-	const settings = await loadSettings();
-	
-	// create the split area
-	/*const split = */Split(['#editor-pane', '#table-pane'], {
-		direction: 'vertical',
-		sizes: [30, 70],
-	});
+	const state: stateType = {
+		settings: await loadSettings(),
+		pageId: 0,
+	};
 
+	// create the tabs
+	renderTabs(state);
+	
 	// get DOM elements
 	const toolbarElement = getElementById('toolbar-pane');
-	const editorElement = getEditorElement();
 
-	// set editor content
-	editorElement.value = settings.statement;
-	
 	// attach toolbar listener
 	toolbarElement.addEventListener('click', (ev: MouseEvent) => {
 	if (ev.target instanceof HTMLElement && ev.target.tagName === 'A') {
@@ -143,15 +138,15 @@ async function render(): Promise<void> {
 
 			switch (href) {
 				case '#connect':
-					cmdConnect(database, settings.connectString);
+					cmdConnect(database, state);
 					break;
 	
 				case '#run':
-					cmdRun(database, editorElement.value);
+					cmdRun(database, state);
 					break;
 	
 				case '#clear':
-					cmdClean();
+					cmdClean(state);
 					break;
 	
 				default:
@@ -160,37 +155,89 @@ async function render(): Promise<void> {
 		}
 	}, false);
 	
-	// attach editor key listener
-	editorElement.addEventListener('keydown', (ev: KeyboardEvent) => {
-		if (ev.ctrlKey && ev.key === 'Enter') {
-			cmdRun(database, editorElement.value);
-		}
-	});
-	editorElement.addEventListener('keyup', () => {
-		cmdSaveEditorDebounced(editorElement.value);
-	});
-
 	// connect
-	if (settings.connectString.length > 0) {
-		const result = await connectWithDatabase(database, settings.connectString);
-		renderTablePane(result);
+	if (state.settings.connectString.length > 0) {
+		const result = await connectWithDatabase(database, state.settings.connectString);
+		getTableElement(state.pageId).innerHTML = result;
 	}
 }
 
 /*
-*	Render the table pane
+*	Create the tabs
 */
-function renderTablePane(html: string) {
-	const el = getElementById('table-pane');
+function renderTabs(state: stateType) {
+	// get the elements
+	const tabsPaneElement = getElementById('tabs-pane');
 
-	el.innerHTML = html;
+	// process the settings
+	let tabs = '';
+	let views = '';
+	state.settings.pages.forEach((page, index) => {
+		const pageId = `view-pane-${index}`;
+		tabs += `<a href="#${index}">${page.name}</a>`;
+		views += `<div id="${pageId}" class="view-pane" style="${index > 0 ? 'display: none;' : ''}"><div class="editor-pane"><textarea class="editor">${page.statement}</textarea></div><div class="table-pane"></div></div>`;
+	});
+	tabsPaneElement.innerHTML = tabs;
+	tabsPaneElement.insertAdjacentHTML('afterend', views);
+
+	state.settings.pages.forEach((page, index) => {
+		// create the split area
+		const pageId = `view-pane-${index}`;
+
+		if (typeof page.editorSizePct !== 'number' || page.editorSizePct < 10 || page.editorSizePct > 90) {
+			page.editorSizePct = 30;
+		}
+
+		/*const split = */Split([`#${pageId} .editor-pane`, `#${pageId} .table-pane`], {
+			direction: 'vertical',
+			sizes: [page.editorSizePct, 100 - page.editorSizePct],
+		});
+
+		// attach editor key listener
+		const editorElement = getEditorElement(index);
+		editorElement.addEventListener('keydown', (ev: KeyboardEvent) => {
+			if (ev.ctrlKey && ev.key === 'Enter') {
+				page.statement = editorElement.value;
+				saveSettingsDebounced(state.settings);
+				cmdRun(database, editorElement.value);
+			}
+		});
+		editorElement.addEventListener('keyup', () => {
+			page.statement = editorElement.value;
+			saveSettingsDebounced(state.settings);
+		});
+	});
+
+	const viewElements = Array.from(document.getElementsByClassName('view-pane')) as Array<HTMLElement>;
+	const hideAllViews = () => viewElements.forEach(e => e.style.display = 'none');
+	tabsPaneElement.addEventListener('click', (ev: MouseEvent) => {
+		hideAllViews();
+
+		const href = ev.target instanceof HTMLElement ? ev.target.getAttribute('href') : '';
+		if (typeof href !== 'string' || href[0] !== '#') {
+			throw new Error('attribute "href" not found');
+		}
+		const pageId = parseInt(href.replace('#', ''), 10);
+		if (typeof pageId !== 'number' || pageId < 0 || pageId >= state.settings.pages.length) {
+			throw new Error(`Invalid pageId "${pageId}"`);
+		}
+		state.pageId = pageId;
+		getElementById(`view-pane-${pageId}`).style.display = 'block';
+	});
 }
 
 /*
-*	Get the editor DOM element
+*	Get editor element
 */
-function getEditorElement(): HTMLFormElement {
-	return getElementById('editor') as HTMLFormElement;
+function getEditorElement(pageId: number): HTMLFormElement {
+	return querySelector(`#view-pane-${pageId} .editor`) as HTMLFormElement;
+}
+
+/*
+*	Get table element
+*/
+function getTableElement(pageId: number): HTMLElement {
+	return querySelector(`#view-pane-${pageId} .table-pane`) as HTMLElement;
 }
 
 onDomReady(render);
