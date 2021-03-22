@@ -28,21 +28,14 @@
 
 import {remote} from 'electron';
 import {onDomReady, getElementById, querySelector} from './dom';
-import debounce from 'lodash.debounce';
-import {loadSettings, saveSettings} from './settings';
+import {getDefaultSettings,loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
-import Split from 'split.js';
+import {renderTabs, addTab} from './tabs';
 import {Database} from './database';
 import {runStatement} from './runStatement';
 
-import type {settingsType} from './settings';
+import type {stateType} from './state';
 
-type stateType = {
-	settings: settingsType,
-	pageId: number,
-};
-
-const saveSettingsDebounced = debounce(saveSettings, 5 * 1000);
 const database = new Database();
 
 /*
@@ -58,28 +51,27 @@ async function cmdConnect(database: Database, state: stateType): Promise<void> {
  
 	// connect
 	const result = await connectWithDatabase(database, state.settings.connectString);
-	getTableElement(state.pageId).innerHTML = result;
+	getTableElement(state.currentPageId).innerHTML = result;
 
-	// set configuration settings
+	// save the settings
 	await saveSettings({connectString: state.settings.connectString});
 }
- 
-/*
-*	Execute the "run" command
-*/
-async function cmdRun(database: Database, state: stateType): Promise<void> {
-	const html = await runStatement(database, state.settings.pages[state.pageId].statement);
-	getTableElement(state.pageId).innerHTML = html;
-}
- 
-/*
-*	Execute the "clean" command
-*/
-function cmdClean(state: stateType): void {
-	state.settings.pages[state.pageId].statement = '';
-	getEditorElement(state.pageId).value = '';
-}
 
+/*
+*	Execute the "clear" command
+*/
+function cmdClear(state: stateType): void {
+	// set default settings for pages
+	Object.assign(state.settings.pages, getDefaultSettings().pages);
+	state.currentPageId = 0;
+
+	// render tabs
+	renderTabs(database, state);
+
+	// save the settings (not await because we don't care when it finishes)
+	saveSettings({pages: state.settings.pages});
+}
+ 
 /*
 *	Connect with the database
 */
@@ -111,21 +103,25 @@ async function connectWithDatabase(database: Database, connectString: string): P
 *	render
 */
 async function render(): Promise<void> {
+	// get configuration settings
+	const state: stateType = {
+		settings: await loadSettings(),
+		currentPageId: 0,
+	};
+
 	// check for the window close
-	window.addEventListener('unload', function() {
+	window.addEventListener('unload', async () => {
+		// save the settings
+		await saveSettings(state.settings);
+
+		// disconnect
 		if (database.isConnected()) {
 			database.disconnect();
 		}		
 	});
 
-	// get configuration settings
-	const state: stateType = {
-		settings: await loadSettings(),
-		pageId: 0,
-	};
-
 	// create the tabs
-	renderTabs(state);
+	renderTabs(database, state);
 	
 	// get DOM elements
 	const toolbarElement = getElementById('toolbar-pane');
@@ -140,13 +136,17 @@ async function render(): Promise<void> {
 				case '#connect':
 					cmdConnect(database, state);
 					break;
+
+				case '#new':
+					addTab(database, state);
+					break;
 	
 				case '#run':
-					cmdRun(database, state);
+					runStatement(database, state.settings.pages[state.currentPageId].statement, getTableElement(state.currentPageId));
 					break;
 	
 				case '#clear':
-					cmdClean(state);
+					cmdClear(state);
 					break;
 	
 				default:
@@ -158,79 +158,8 @@ async function render(): Promise<void> {
 	// connect
 	if (state.settings.connectString.length > 0) {
 		const result = await connectWithDatabase(database, state.settings.connectString);
-		getTableElement(state.pageId).innerHTML = result;
+		getTableElement(state.currentPageId).innerHTML = result;
 	}
-}
-
-/*
-*	Create the tabs
-*/
-function renderTabs(state: stateType) {
-	// get the elements
-	const tabsPaneElement = getElementById('tabs-pane');
-
-	// process the settings
-	let tabs = '';
-	let views = '';
-	state.settings.pages.forEach((page, index) => {
-		const pageId = `view-pane-${index}`;
-		tabs += `<a href="#${index}">${page.name}</a>`;
-		views += `<div id="${pageId}" class="view-pane" style="${index > 0 ? 'display: none;' : ''}"><div class="editor-pane"><textarea class="editor">${page.statement}</textarea></div><div class="table-pane"></div></div>`;
-	});
-	tabsPaneElement.innerHTML = tabs;
-	tabsPaneElement.insertAdjacentHTML('afterend', views);
-
-	state.settings.pages.forEach((page, index) => {
-		// create the split area
-		const pageId = `view-pane-${index}`;
-
-		if (typeof page.editorSizePct !== 'number' || page.editorSizePct < 10 || page.editorSizePct > 90) {
-			page.editorSizePct = 30;
-		}
-
-		/*const split = */Split([`#${pageId} .editor-pane`, `#${pageId} .table-pane`], {
-			direction: 'vertical',
-			sizes: [page.editorSizePct, 100 - page.editorSizePct],
-		});
-
-		// attach editor key listener
-		const editorElement = getEditorElement(index);
-		editorElement.addEventListener('keydown', (ev: KeyboardEvent) => {
-			if (ev.ctrlKey && ev.key === 'Enter') {
-				page.statement = editorElement.value;
-				saveSettingsDebounced(state.settings);
-				cmdRun(database, editorElement.value);
-			}
-		});
-		editorElement.addEventListener('keyup', () => {
-			page.statement = editorElement.value;
-			saveSettingsDebounced(state.settings);
-		});
-	});
-
-	const viewElements = Array.from(document.getElementsByClassName('view-pane')) as Array<HTMLElement>;
-	const hideAllViews = () => viewElements.forEach(e => e.style.display = 'none');
-	tabsPaneElement.addEventListener('click', (ev: MouseEvent) => {
-		hideAllViews();
-
-		const href = ev.target instanceof HTMLElement ? ev.target.getAttribute('href') : '';
-		if (typeof href !== 'string' || href[0] !== '#') {
-			throw new Error('attribute "href" not found');
-		}
-		const pageId = parseInt(href.replace('#', ''), 10);
-		if (typeof pageId !== 'number' || pageId < 0 || pageId >= state.settings.pages.length) {
-			throw new Error(`Invalid pageId "${pageId}"`);
-		}
-		state.pageId = pageId;
-		getElementById(`view-pane-${pageId}`).style.display = 'block';
-	});
-}
-
-/*
-*	Get editor element
-*/
-function getEditorElement(pageId: number): HTMLFormElement {
-	return querySelector(`#view-pane-${pageId} .editor`) as HTMLFormElement;
 }
 
 /*

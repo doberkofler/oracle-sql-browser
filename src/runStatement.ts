@@ -3,7 +3,11 @@ import {getTableMarkup} from './table';
 import oracledb from 'oracledb';
 import type {DBError} from 'oracledb';
 
-export async function runStatement(database: Database, statement: string): Promise<string> {
+export async function runStatement(database: Database, statement: string, resultElement: HTMLElement): Promise<void> {
+	resultElement.innerHTML = await executeStatement(database, statement);
+}
+
+async function executeStatement(database: Database, statement: string): Promise<string> {
 	// remove trailing spaces and trailing semicolon
 	const purifiedStatement = Database.purifyStatement(statement);
 
