@@ -91,7 +91,7 @@ export function renderTabs(database: Database, state: stateType): void {
 	});
 
 	// add the "add tab" icon
-	tabs += '<div id="tab-add" class="tab-container""><a href="#" class="tab-add">+</a></div>';
+	tabs += '<div id="tab-add" class="tab-container""><a href="#" class="add-icon">+</a></div>';
 
 	// render
 	tabsPaneElement.innerHTML = tabs;
@@ -119,7 +119,7 @@ export function renderTabs(database: Database, state: stateType): void {
 				const pageId = getPageId(target);
 				closeTab(state, pageId);
 				settings.saveSettings(state.settings);
-			} else if (target.classList.contains('tab-add')) {
+			} else if (target.classList.contains('add-icon')) {
 				addTab(database, state);
 				settings.saveSettings(state.settings);
 			}
