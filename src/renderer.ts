@@ -1,4 +1,5 @@
 import {remote, ipcRenderer} from 'electron';
+import XLSX from 'xlsx';
 import {onDomReady, querySelector} from './dom';
 import {getDefaultSettings,loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
@@ -42,9 +43,9 @@ async function cmdDisconnect(database: Database, state: stateType): Promise<void
 }
 
 /*
-*	Execute the "clear" command
+*	Execute the "closeAllTabs" command
 */
-async function cmdClear(state: stateType): Promise<void> {
+async function cmdCloseAllTabs(state: stateType): Promise<void> {
 	// set default settings for pages
 	Object.assign(state.settings.pages, getDefaultSettings().pages);
 
@@ -53,6 +54,23 @@ async function cmdClear(state: stateType): Promise<void> {
 
 	// save the settings (not await because we don't care when it finishes)
 	await saveSettings({pages: state.settings.pages});
+}
+
+/*
+*
+*/
+async function cmdExport(pageId: number) {
+	const tableElement = getTableElement(pageId);
+	const wb = XLSX.utils.table_to_book(tableElement);
+	const file = await remote.dialog.showSaveDialog({
+		title: 'Save file as',
+		filters: [{
+			name: 'Spreadsheets',
+			extensions: 'xlsx|csv'.split('|')
+		}]
+	});
+
+	XLSX.writeFile(wb, file.filePath);
 }
  
 /*
@@ -102,16 +120,18 @@ async function render(): Promise<void> {
 			cmdDisconnect(database, state);
 			break;
 		
+		case menuOption.closeAllTabs:
+			cmdCloseAllTabs(state);
+			break;
+	
 		case menuOption.run:
 			runStatement(database, state.settings.pages[state.settings.currentPageId].statement, getTableElement(state.settings.currentPageId));
 			break;
 
-		case menuOption.clear:
-			cmdClear(state);
-			break;
-	
 		case menuOption.export:
-			remote.dialog.showErrorBox('Error', 'The export functionality has not yet been implemented');
+			if (state.settings.currentPageId >= 0) {
+				cmdExport(state.settings.currentPageId);
+			}
 			break;
 		
 

@@ -84,7 +84,13 @@ function createApplicationMenu(mainWindow: BrowserWindow): void {
 				click: (/*item, focusedWindow*/) => {
 					mainWindow.webContents.send(channel.menu, menuOption.disconnect);
 				},
-			}
+			},
+			{
+				label: 'Close all tabs',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.closeAllTabs);
+				},
+			},
 		]
 	});
 
@@ -96,12 +102,6 @@ function createApplicationMenu(mainWindow: BrowserWindow): void {
 				accelerator: 'Control+Enter',
 				click: (/*item, focusedWindow*/) => {
 					mainWindow.webContents.send(channel.menu, menuOption.run);
-				},
-			},
-			{
-				label: 'Clear',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.clear);
 				},
 			},
 			{

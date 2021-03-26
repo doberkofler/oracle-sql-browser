@@ -6,7 +6,7 @@ export enum menuOption {
 	connect = 'connect',
 	disconnect = 'disconnect',
 	run = 'run',
-	clear = 'clear',
+	closeAllTabs = 'closeAllTabs',
 	export = 'export',
 }
 
