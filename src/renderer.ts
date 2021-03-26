@@ -1,38 +1,11 @@
-/**
- * This file will automatically be loaded by webpack and run in the "renderer" context.
- * To learn more about the differences between the "main" and the "renderer" context in
- * Electron, visit:
- *
- * https://electronjs.org/docs/tutorial/application-architecture#main-and-renderer-processes
- *
- * By default, Node.js integration in this file is disabled. When enabling Node.js integration
- * in a renderer process, please be aware of potential security implications. You can read
- * more about security risks here:
- *
- * https://electronjs.org/docs/tutorial/security
- *
- * To enable Node.js integration in this file, open up `main.js` and enable the `nodeIntegration`
- * flag:
- *
- * ```
- *  // Create the browser window.
- *  mainWindow = new BrowserWindow({
- *    width: 800,
- *    height: 600,
- *    webPreferences: {
- *      nodeIntegration: true
- *    }
- *  });
- * ```
- */
-
-import {remote} from 'electron';
-import {onDomReady, getElementById, querySelector} from './dom';
+import {remote, ipcRenderer} from 'electron';
+import {onDomReady, querySelector} from './dom';
 import {getDefaultSettings,loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
-import {renderTabs, addTab} from './tabs';
+import {renderTabs} from './tabs';
 import {Database} from './database';
 import {runStatement} from './runStatement';
+import {channel, menuOption} from './constants';
 
 import type {stateType} from './state';
 
@@ -51,25 +24,35 @@ async function cmdConnect(database: Database, state: stateType): Promise<void> {
  
 	// connect
 	const result = await connectWithDatabase(database, state.settings.connectString);
-	getTableElement(state.currentPageId).innerHTML = result;
+	getTableElement(state.settings.currentPageId).innerHTML = result;
 
 	// save the settings
 	await saveSettings({connectString: state.settings.connectString});
 }
 
 /*
+*	Execute the "disconnect" command
+*/
+async function cmdDisconnect(database: Database, state: stateType): Promise<void> {
+	if (database.isConnected()) {
+		await database.disconnect();
+	}
+ 
+	getTableElement(state.settings.currentPageId).innerHTML = 'Disconnected';
+}
+
+/*
 *	Execute the "clear" command
 */
-function cmdClear(state: stateType): void {
+async function cmdClear(state: stateType): Promise<void> {
 	// set default settings for pages
 	Object.assign(state.settings.pages, getDefaultSettings().pages);
-	state.currentPageId = 0;
 
 	// render tabs
 	renderTabs(database, state);
 
 	// save the settings (not await because we don't care when it finishes)
-	saveSettings({pages: state.settings.pages});
+	await saveSettings({pages: state.settings.pages});
 }
  
 /*
@@ -106,8 +89,36 @@ async function render(): Promise<void> {
 	// get configuration settings
 	const state: stateType = {
 		settings: await loadSettings(),
-		currentPageId: 0,
 	};
+
+	// listen to messages from main process 
+	ipcRenderer.on(channel.menu, (event, message: string) => {
+		switch (message) {
+		case menuOption.connect:
+			cmdConnect(database, state);
+			break;
+
+		case menuOption.disconnect:
+			cmdDisconnect(database, state);
+			break;
+		
+		case menuOption.run:
+			runStatement(database, state.settings.pages[state.settings.currentPageId].statement, getTableElement(state.settings.currentPageId));
+			break;
+
+		case menuOption.clear:
+			cmdClear(state);
+			break;
+	
+		case menuOption.export:
+			remote.dialog.showErrorBox('Error', 'The export functionality has not yet been implemented');
+			break;
+		
+
+		default:
+			throw new Error(`The channel "${channel.menu}" received an unrecongnized message "${message}"`);
+		}
+	});
 
 	// check for the window close
 	window.addEventListener('unload', async () => {
@@ -122,43 +133,11 @@ async function render(): Promise<void> {
 
 	// create the tabs
 	renderTabs(database, state);
-	
-	// get DOM elements
-	const toolbarElement = getElementById('toolbar-pane');
 
-	// attach toolbar listener
-	toolbarElement.addEventListener('click', (ev: MouseEvent) => {
-	if (ev.target instanceof HTMLElement && ev.target.tagName === 'A') {
-			const element = ev.target as HTMLAnchorElement;
-			const href = element.getAttribute('href');
-
-			switch (href) {
-				case '#connect':
-					cmdConnect(database, state);
-					break;
-
-				case '#new':
-					addTab(database, state);
-					break;
-	
-				case '#run':
-					runStatement(database, state.settings.pages[state.currentPageId].statement, getTableElement(state.currentPageId));
-					break;
-	
-				case '#clear':
-					cmdClear(state);
-					break;
-	
-				default:
-					break;
-			}
-		}
-	}, false);
-	
 	// connect
 	if (state.settings.connectString.length > 0) {
 		const result = await connectWithDatabase(database, state.settings.connectString);
-		getTableElement(state.currentPageId).innerHTML = result;
+		getTableElement(state.settings.currentPageId).innerHTML = result;
 	}
 }
 

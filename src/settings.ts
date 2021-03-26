@@ -23,6 +23,7 @@ export type settingsType = {
 		isMaximized: boolean;
 	};
 	pages: Array<pageType>;
+	currentPageId: number,
 };
 
 const settingsName = 'oracle_sql_browser_settings';
@@ -41,6 +42,7 @@ export function getDefaultSettings(): settingsType {
 			isMaximized: false,
 		},
 		pages: [],
+		currentPageId: -1,
 	};
 
 	addPage(settings);
@@ -49,7 +51,7 @@ export function getDefaultSettings(): settingsType {
 }
 
 /*
-*	Load settings
+*	Add page
 */
 export function addPage(settings: settingsType): pageType {
 	const page = {
@@ -59,10 +61,18 @@ export function addPage(settings: settingsType): pageType {
 	};
 
 	settings.pages.push(page);
+	settings.currentPageId = settings.pages.length - 1;
 
 	return page;
 }
 	
+/*
+*	Remove page
+*/
+export function removePage(settings: settingsType, pageId: number): void {
+	settings.pages.splice(pageId, 1);
+	settings.currentPageId = settings.pages.length > 0 ? settings.pages.length - 1 : -1;
+}
 	
 /*
 *	Load settings

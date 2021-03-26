@@ -1,6 +1,7 @@
-import {app, BrowserWindow} from 'electron';
-import {isDebug} from './utilities';
+import {app, BrowserWindow, Menu, shell} from 'electron';
+import defaultMenu from 'electron-default-menu';
 import {loadSettings, saveSettings} from './settings';
+import {channel, menuOption} from './constants';
 import * as path from 'path';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -8,12 +9,16 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 	app.quit();
 }
 
+/*
+*	Create browser window
+*/
 async function createWindow(): Promise<void> {
 	// load settings
 	const settings = await loadSettings();
 	
 	// Create the browser window.
 	const mainWindow = new BrowserWindow({
+		show: false,
 		height: settings.windowStatus.height,
 		width: settings.windowStatus.width,
 		x: settings.windowStatus.x,
@@ -25,17 +30,19 @@ async function createWindow(): Promise<void> {
 		}
 	});
 
+	mainWindow.once('ready-to-show', () => {
+		mainWindow.show()
+	});
+
 	if (settings.windowStatus.isMaximized) {
 		mainWindow.maximize();
 	}
 
+	// create application menu
+	createApplicationMenu(mainWindow);
+
 	// and load the index.html of the app.
 	mainWindow.loadFile(path.resolve(__dirname, '../src/index.html'));
-
-	// Open the DevTools.
-	if (isDebug()) {
-		mainWindow.webContents.openDevTools();
-	}
 
 	async function saveWindowStatus(): Promise<void> {
 		const isMaximized = mainWindow.isMaximized();
@@ -55,6 +62,58 @@ async function createWindow(): Promise<void> {
 	mainWindow.on('resize', saveWindowStatus);
 	mainWindow.on('move', saveWindowStatus);
 	mainWindow.on('close', saveWindowStatus);
+}
+
+/*
+*	Create application menu
+*/
+function createApplicationMenu(mainWindow: BrowserWindow): void {
+	const menu = defaultMenu(app, shell);
+
+	menu.splice(1, 0, {
+		label: 'File',
+		submenu: [
+			{
+				label: 'Connect',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.connect);
+				},
+			},
+			{
+				label: 'Disconnect',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.disconnect);
+				},
+			}
+		]
+	});
+
+	menu.splice(2, 0, {
+		label: 'Script',
+		submenu: [
+			{
+				label: 'Run',
+				accelerator: 'Control+Enter',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.run);
+				},
+			},
+			{
+				label: 'Clear',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.clear);
+				},
+			},
+			{
+				label: 'Export',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.export);
+				},
+			},
+		]
+	});
+
+	Menu.setApplicationMenu(Menu.buildFromTemplate(menu));	
 }
 
 // This method will be called when Electron has finished
