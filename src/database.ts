@@ -54,10 +54,16 @@ export class Database {
 		});
 
 		if (!Array.isArray(result.rows)) {
-			throw new Error('No rows has been returned');
+			throw new Error('No array has been returned');
 		}
 		if (!Array.isArray(result.metaData)) {
 			throw new Error('No metaData has been returned');
+		}
+
+		if (result.rows.length > 0) {
+			result.rows[0].forEach((column: any, index: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+				console.log(`#${index}: type="${typeof column}" value="${column}"`);
+			});
 		}
 
 		return {

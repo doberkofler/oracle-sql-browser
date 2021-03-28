@@ -4,6 +4,17 @@
 
 import type {Oracle$RowType, Oracle$MetaType, Oracle$ResultType} from './database';
 
+const dateFormat = new Intl.DateTimeFormat(undefined, {
+	year: 'numeric',
+	month: 'short',
+	day: 'numeric',
+	/*
+	hour: 'numeric',
+	minute: 'numeric',
+	second: 'numeric',
+	*/
+});
+
 export function getTableMarkup(data: Oracle$ResultType): string {
 	const html = [];
 
@@ -46,12 +57,24 @@ function getRowMarkup(row: Oracle$RowType, meta: Array<Oracle$MetaType>): string
 	html.push('<tr>');
 	const colNumber = meta.length;
 	for (let i = 0; i < colNumber; i++) {
-		const value = row[i];
-		const displayValue = value === null || value === '' ? '&nbsp;' : value.toString();
-
-		html.push(`<td><div>${displayValue}</div></td>`);
+		const value = getValue(row[i]);
+		html.push(`<td><div>${value.length > 0 ? value : '&nbsp;'}</div></td>`);
 	}
 	html.push('</tr>');
 
 	return html.join('');
+}
+
+function getValue(value: any): string { // eslint-disable-line @typescript-eslint/no-explicit-any
+	if (value === null) {
+		return '';
+	} else if (typeof value === 'string') {
+		return value;
+	} else if (typeof value === 'number') {
+		return value.toString();
+	} else if (Object.prototype.toString.call(value) === '[object Date]') {
+		return dateFormat.format(value);
+	} else {
+		return `[${Object.prototype.toString.call(value)}]`;
+	}
 }
