@@ -195,6 +195,9 @@ function activateTab(pageId: number) {
 	const viewElements = Array.from(document.getElementsByClassName('view-pane')) as Array<HTMLElement>;
 	viewElements.forEach(e => e.style.display = 'none');
 	getElementById(`view-pane-${pageId}`).style.display = 'block';
+
+	// focus
+	getEditorElement(pageId).focus();
 }
 
 function getTab(index: number, name: string): string {
