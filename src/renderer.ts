@@ -110,27 +110,35 @@ async function render(): Promise<void> {
 	};
 
 	// listen to messages from main process 
-	ipcRenderer.on(channel.menu, (event, message: string) => {
+	ipcRenderer.on(channel.menu, async (event, message: string) => {
 		switch (message) {
 		case menuOption.connect:
-			cmdConnect(database, state);
+			await cmdConnect(database, state);
 			break;
 
 		case menuOption.disconnect:
-			cmdDisconnect(database, state);
+			await cmdDisconnect(database, state);
 			break;
 		
 		case menuOption.closeAllTabs:
-			cmdCloseAllTabs(state);
+			await cmdCloseAllTabs(state);
 			break;
 	
 		case menuOption.run:
-			runStatement(database, state.settings.pages[state.settings.currentPageId].statement, getTableElement(state.settings.currentPageId));
+			await runStatement(database, state.settings.pages[state.settings.currentPageId].statement, getTableElement(state.settings.currentPageId));
 			break;
 
+		case menuOption.commit:
+			await runStatement(database, 'commit', getTableElement(state.settings.currentPageId));
+			break;
+
+		case menuOption.rollback:
+			await runStatement(database, 'rollback', getTableElement(state.settings.currentPageId));
+			break;
+	
 		case menuOption.export:
 			if (state.settings.currentPageId >= 0) {
-				cmdExport(state.settings.currentPageId);
+				await cmdExport(state.settings.currentPageId);
 			}
 			break;
 		

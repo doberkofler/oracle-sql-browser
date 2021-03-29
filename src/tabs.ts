@@ -3,7 +3,6 @@ import debounce from 'lodash.debounce';
 import {getElementById, querySelector} from './dom';
 import * as settings from './settings';
 import {Database} from './database';
-import {runStatement} from './runStatement';
 
 import type {stateType, settingsType, pageType} from './state';
 
@@ -223,14 +222,8 @@ function addTabListener(database: Database, settings: settingsType, currentPageI
 		sizes: [page.editorSizePct, 100 - page.editorSizePct],
 	});
 
-	// attach editor key listener
+	// save statement
 	const editorElement = getEditorElement(currentPageId);
-	editorElement.addEventListener('keydown', (ev: KeyboardEvent) => {
-		if (ev.ctrlKey && ev.key === 'Enter') {
-			page.statement = editorElement.value;
-			runStatement(database, page.statement, getTableElement(currentPageId));
-		}
-	});
 	editorElement.addEventListener('keyup', () => {
 		// upfdate state with current statement
 		page.statement = editorElement.value;
@@ -245,11 +238,4 @@ function addTabListener(database: Database, settings: settingsType, currentPageI
 */
 function getEditorElement(pageId: number): HTMLFormElement {
 	return querySelector(`#view-pane-${pageId} .editor`) as HTMLFormElement;
-}
-
-/*
-*	Get table element
-*/
-function getTableElement(pageId: number): HTMLElement {
-	return querySelector(`#view-pane-${pageId} .table-pane`) as HTMLElement;
 }

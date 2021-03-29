@@ -105,6 +105,20 @@ function createApplicationMenu(mainWindow: BrowserWindow): void {
 				},
 			},
 			{
+				label: 'Commit',
+				accelerator: 'Control+C',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.commit);
+				},
+			},
+			{
+				label: 'Rollback',
+				accelerator: 'Control+R',
+				click: (/*item, focusedWindow*/) => {
+					mainWindow.webContents.send(channel.menu, menuOption.rollback);
+				},
+			},
+			{
 				label: 'Export',
 				click: (/*item, focusedWindow*/) => {
 					mainWindow.webContents.send(channel.menu, menuOption.export);

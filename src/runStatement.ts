@@ -3,10 +3,16 @@ import {getTableMarkup} from './table';
 import oracledb from 'oracledb';
 import type {DBError} from 'oracledb';
 
+/*
+*	Run an arbistrary sql statement and show results
+*/
 export async function runStatement(database: Database, statement: string, resultElement: HTMLElement): Promise<void> {
 	resultElement.innerHTML = await executeStatement(database, statement);
 }
 
+/*
+*	Execute statement
+*/
 async function executeStatement(database: Database, statement: string): Promise<string> {
 	// remove trailing spaces and trailing semicolon
 	const purifiedStatement = Database.purifyStatement(statement);
@@ -22,22 +28,22 @@ async function executeStatement(database: Database, statement: string): Promise<
 	// switch depending in statement type
 	switch (info.statementType) {
 		case oracledb.STMT_TYPE_SELECT:
-			return await selectStatement(database, purifiedStatement);
+			return await executeSelect(database, purifiedStatement);
 
 		case oracledb.STMT_TYPE_INSERT:
-			return await InsertStatement(database, purifiedStatement);
+			return await executeInsert(database, purifiedStatement);
 
 		case oracledb.STMT_TYPE_UPDATE:
-			return await UpdateStatement(database, purifiedStatement);
+			return await executeUpdate(database, purifiedStatement);
 
 		case oracledb.STMT_TYPE_DELETE:
-			return await DeleteStatement(database, purifiedStatement);
+			return await executeDelete(database, purifiedStatement);
 
 		case oracledb.STMT_TYPE_COMMIT:
-			return await commitStatement(database, purifiedStatement);
+			return await executeCommit(database);
 
 		case oracledb.STMT_TYPE_ROLLBACK:
-			return await rollbackStatement(database, purifiedStatement);
+			return await executeRollback(database);
 
 		default:
 			break;
@@ -46,7 +52,10 @@ async function executeStatement(database: Database, statement: string): Promise<
 	return '';
 }
 
-async function selectStatement(database: Database, statement: string): Promise<string> {
+/*
+*	Execute a select statement
+*/
+async function executeSelect(database: Database, statement: string): Promise<string> {
 	let result;
 	
 	try {
@@ -55,16 +64,21 @@ async function selectStatement(database: Database, statement: string): Promise<s
 		return getFormattedError(database, e, statement);
 	}
 
+	console.log('executeSelect: result=', result);
+
 	const html = getTableMarkup(result);
 
 	return html;
 }
 
-async function InsertStatement(database: Database, statement: string): Promise<string> {
+/*
+*	Execute a insert statement
+*/
+async function executeInsert(database: Database, statement: string): Promise<string> {
 	let result;
 
 	try {
-		result = await database.getConnection().execute(statement);
+		result = await database.getConnection().execute(statement, {}, {extendedMetaData: true});
 	} catch (e) {
 		return getFormattedError(database, e, statement);
 	}
@@ -72,11 +86,14 @@ async function InsertStatement(database: Database, statement: string): Promise<s
 	return `Successfully inserted ${result.rowsAffected} rows.`;
 }
 
-async function UpdateStatement(database: Database, statement: string): Promise<string> {
+/*
+*	Execute a update statement
+*/
+async function executeUpdate(database: Database, statement: string): Promise<string> {
 	let result;
 
 	try {
-		result = await database.getConnection().execute(statement);
+		result = await database.getConnection().execute(statement, {}, {extendedMetaData: true});
 	} catch (e) {
 		return getFormattedError(database, e, statement);
 	}
@@ -84,11 +101,14 @@ async function UpdateStatement(database: Database, statement: string): Promise<s
 	return `Successfully updated ${result.rowsAffected} rows.`;
 }
 
-async function DeleteStatement(database: Database, statement: string): Promise<string> {
+/*
+*	Execute a delete statement
+*/
+async function executeDelete(database: Database, statement: string): Promise<string> {
 	let result;
 
 	try {
-		result = await database.getConnection().execute(statement);
+		result = await database.getConnection().execute(statement, {}, {extendedMetaData: true});
 	} catch (e) {
 		return getFormattedError(database, e, statement);
 	}
@@ -96,26 +116,35 @@ async function DeleteStatement(database: Database, statement: string): Promise<s
 	return `Successfully deleted ${result.rowsAffected} rows.`;
 }
 
-async function commitStatement(database: Database, statement: string): Promise<string> {
+/*
+*	Execute commit statement
+*/
+async function executeCommit(database: Database): Promise<string> {
 	try {
 		await database.getConnection().commit();
 	} catch (e) {
-		return getFormattedError(database, e, statement);
+		return getFormattedError(database, e, 'commit');
 	}
 
 	return 'Successful commit.';
 }
 
-async function rollbackStatement(database: Database, statement: string): Promise<string> {
+/*
+*	Execute rollback statement
+*/
+async function executeRollback(database: Database): Promise<string> {
 	try {
 		await database.getConnection().rollback();
 	} catch (e) {
-		return getFormattedError(database, e, statement);
+		return getFormattedError(database, e, 'rollback');
 	}
 
-	return 'Successful commit.';
+	return 'Successful rollback.';
 }
 
+/*
+*	Get formatted error text
+*/
 function getFormattedError(database: Database, error: DBError, statement: string): string { // eslint-disable-line @typescript-eslint/no-unused-vars
 	const html = [];
 
