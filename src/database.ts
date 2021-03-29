@@ -17,7 +17,16 @@ export class Database {
 	private connection: oracledb.Connection|null = null;
 
 	constructor() {
+		// The format of query rows fetched when using connection.execute() or connection.queryStream().
+		// If specified as oracledb.OUT_FORMAT_ARRAY, each row is fetched as an array of column values.
 		oracledb.outFormat = oracledb.OUT_FORMAT_ARRAY;
+
+		// When any column having one of the types is queried with execute() or queryStream(),
+		//	the column data is returned as a string instead of the default representation.
+		oracledb.fetchAsString = [oracledb.CLOB];
+
+		// This synchronous function loads and initializes the Oracle Client libraries that are necessary
+		//	for node-oracledb to communicate with Oracle Database.
 		oracledb.initOracleClient({
 			libDir: isDebug() ? path.join(__dirname, '../instantclient_19_8') : path.join(process.resourcesPath, 'instantclient_19_8')
 		});

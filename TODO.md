@@ -1,5 +1,7 @@
 # TODO
 
+## Better alignment of columns in the result table
+
 ## Support for all statemts (not only select)
 
 ## Create configuration options
@@ -17,7 +19,7 @@
 
 ## Support for private connection string for each tab page
 
-## Support for CLOB and BLOB values
+## Support for BLOB values
 
 ## Support for double click on columns in the table to see detailed information
 

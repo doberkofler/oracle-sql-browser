@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.0.2] - 2021-??-??
 
 ### Added
-- Support for multiple tabs
+- Support for multiple tabs.
+- Support for CLOB columns.
+- Support for Insert, Update, Delete, Commit and Rollback.
 
 ### Changed
 
