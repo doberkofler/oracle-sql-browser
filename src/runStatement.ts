@@ -24,6 +24,21 @@ async function executeStatement(database: Database, statement: string): Promise<
 		case oracledb.STMT_TYPE_SELECT:
 			return await selectStatement(database, purifiedStatement);
 
+		case oracledb.STMT_TYPE_INSERT:
+			return await InsertStatement(database, purifiedStatement);
+
+		case oracledb.STMT_TYPE_UPDATE:
+			return await UpdateStatement(database, purifiedStatement);
+
+		case oracledb.STMT_TYPE_DELETE:
+			return await DeleteStatement(database, purifiedStatement);
+
+		case oracledb.STMT_TYPE_COMMIT:
+			return await commitStatement(database, purifiedStatement);
+
+		case oracledb.STMT_TYPE_ROLLBACK:
+			return await rollbackStatement(database, purifiedStatement);
+
 		default:
 			break;
 	}
@@ -43,6 +58,62 @@ async function selectStatement(database: Database, statement: string): Promise<s
 	const html = getTableMarkup(result);
 
 	return html;
+}
+
+async function InsertStatement(database: Database, statement: string): Promise<string> {
+	let result;
+
+	try {
+		result = await database.getConnection().execute(statement);
+	} catch (e) {
+		return getFormattedError(database, e, statement);
+	}
+
+	return `Successfully inserted ${result.rowsAffected} rows.`;
+}
+
+async function UpdateStatement(database: Database, statement: string): Promise<string> {
+	let result;
+
+	try {
+		result = await database.getConnection().execute(statement);
+	} catch (e) {
+		return getFormattedError(database, e, statement);
+	}
+
+	return `Successfully updated ${result.rowsAffected} rows.`;
+}
+
+async function DeleteStatement(database: Database, statement: string): Promise<string> {
+	let result;
+
+	try {
+		result = await database.getConnection().execute(statement);
+	} catch (e) {
+		return getFormattedError(database, e, statement);
+	}
+
+	return `Successfully deleted ${result.rowsAffected} rows.`;
+}
+
+async function commitStatement(database: Database, statement: string): Promise<string> {
+	try {
+		await database.getConnection().commit();
+	} catch (e) {
+		return getFormattedError(database, e, statement);
+	}
+
+	return 'Successful commit.';
+}
+
+async function rollbackStatement(database: Database, statement: string): Promise<string> {
+	try {
+		await database.getConnection().rollback();
+	} catch (e) {
+		return getFormattedError(database, e, statement);
+	}
+
+	return 'Successful commit.';
 }
 
 function getFormattedError(database: Database, error: DBError, statement: string): string { // eslint-disable-line @typescript-eslint/no-unused-vars

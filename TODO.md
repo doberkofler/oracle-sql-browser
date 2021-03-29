@@ -1,5 +1,7 @@
 # TODO
 
+## Support for all statemts (not only select)
+
 ## Create configuration options
 - Directory with Oracle client
 - Connection string
