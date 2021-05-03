@@ -1,7 +1,8 @@
-import {lexer} from '../src/sqlparser/lexer';
+import {lexer, ruleNames} from '../src/sqlparser/lexer';
+import _ from 'lodash';
 
-describe('parser', () => {
-	it('lexer', () => {
+describe('lexer', () => {
+	it('ws and nl', () => {
 		expect.hasAssertions();
 
 		expect(getTokens(' ')).toStrictEqual([
@@ -11,7 +12,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 0,
 				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 		]);
@@ -23,7 +24,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 0,
 				text: '\t',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: '\t',
 			},
 		]);
@@ -35,7 +36,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 0,
 				text: '   ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: '   ',
 			},
 		]);
@@ -47,10 +48,156 @@ describe('parser', () => {
 				lineBreaks: 1,
 				offset: 0,
 				text: '\n',
-				type: 'NL',
+				type: ruleNames.nl,
 				value: '\n',
 			},
 		]);
+	});
+
+	it('number', () => {
+		expect.hasAssertions();
+
+		expect(getTokens('0')).toStrictEqual([
+			{
+				col: 1,
+				line: 1,
+				lineBreaks: 0,
+				offset: 0,
+				text: '0',
+				type: ruleNames.number,
+				value: '0',
+			},
+		]);
+
+		expect(getTokens('1')).toStrictEqual([
+			{
+				col: 1,
+				line: 1,
+				lineBreaks: 0,
+				offset: 0,
+				text: '1',
+				type: ruleNames.number,
+				value: '1',
+			},
+		]);
+
+		expect(getTokens(' 1')).toStrictEqual([
+			{
+				col: 1,
+				line: 1,
+				lineBreaks: 0,
+				offset: 0,
+				text: ' ',
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				col: 2,
+				line: 1,
+				lineBreaks: 0,
+				offset: 1,
+				text: '1',
+				type: ruleNames.number,
+				value: '1',
+			},
+		]);
+
+		expect(getTokens('.14')).toStrictEqual([
+			{
+				col: 1,
+				line: 1,
+				lineBreaks: 0,
+				offset: 0,
+				text: '.14',
+				type: ruleNames.number,
+				value: '.14',
+			},
+		]);
+
+		expect(getTokens('-0.14')).toStrictEqual([
+			{
+				col: 1,
+				line: 1,
+				lineBreaks: 0,
+				offset: 0,
+				text: '-0.14',
+				type: ruleNames.number,
+				value: '-0.14',
+			},
+		]);
+
+		expect(getTokens('+3.14e+10')).toStrictEqual([
+			{
+				col: 1,
+				line: 1,
+				lineBreaks: 0,
+				offset: 0,
+				text: '+3.14e+10',
+				type: ruleNames.number,
+				value: '+3.14e+10',
+			},
+		]);
+	});
+
+	it('operator', () => {
+		expect.hasAssertions();
+
+		expect(getTokens('+', ['type', 'value'])).toStrictEqual([
+			{
+				type: ruleNames.operator,
+				value: '+',
+			},
+		]);
+
+		expect(getTokens('1 + 3', ['type', 'value'])).toStrictEqual([
+			{
+				type: ruleNames.number,
+				value: '1',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.operator,
+				value: '+',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.number,
+				value: '3',
+			},
+		]);
+
+		expect(getTokens('1 / 3', ['type', 'value'])).toStrictEqual([
+			{
+				type: ruleNames.number,
+				value: '1',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.operator,
+				value: '/',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.number,
+				value: '3',
+			},
+		]);
+	});
+
+	it('comment', () => {
+		expect.hasAssertions();
 
 		expect(getTokens('-- comment')).toStrictEqual([
 			{
@@ -59,10 +206,14 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 0,
 				text: '-- comment',
-				type: 'SCOMMENT',
+				type: ruleNames.scomment,
 				value: '-- comment',
 			},
 		]);
+	});
+
+	it('select', () => {
+		expect.hasAssertions();
 
 		expect(getTokens('select sysdate from dual;')).toStrictEqual([
 			{
@@ -71,7 +222,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 0,
 				text: 'select',
-				type: 'SQL_KEYWORDS_SEMI',
+				type: ruleNames.sqlKeywordsSemi,
 				value: 'select',
 			},
 			{
@@ -80,7 +231,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 6,
 				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 			{
@@ -89,7 +240,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 7,
 				text: 'sysdate',
-				type: 'SQL_KEYWORDS',
+				type: ruleNames.sqlKeywordsOther,
 				value: 'sysdate',
 			},
 			{
@@ -98,7 +249,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 14,
 				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 			{
@@ -107,7 +258,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 15,
 				text: 'from',
-				type: 'SQL_KEYWORDS',
+				type: ruleNames.sqlKeywordsOther,
 				value: 'from',
 			},
 			{
@@ -116,7 +267,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 19,
 				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 			{
@@ -125,7 +276,7 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 20,
 				text: 'dual',
-				type: 'IDENTIFIER',
+				type: ruleNames.identifier,
 				value: 'dual',
 			},
 			{
@@ -134,198 +285,296 @@ describe('parser', () => {
 				lineBreaks: 0,
 				offset: 24,
 				text: ';',
-				type: 'SEMICOLON',
+				type: ruleNames.semicolon,
 				value: ';',
 			},
 		]);
+	});
 
-		expect(getTokens(`create procedure foo is
+	it('create procedure', () => {
+		expect.hasAssertions();
+
+		const script = `create procedure foo is
 begin
 	null;
 end;
 /
-`)).toStrictEqual([
+`;
+
+	const tokens = getTokens(script, ['type', 'value']);
+
+	expect(tokens).toStrictEqual([
 			{
-				col: 1,
-				line: 1,
-				lineBreaks: 0,
-				offset: 0,
-				text: 'create',
-				type: 'SQL_KEYWORDS_SLASH',
+				type: ruleNames.sqlKeywordsSlash,
 				value: 'create',
 			},
 			{
-				col: 7,
-				line: 1,
-				lineBreaks: 0,
-				offset: 6,
-				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 			{
-				col: 8,
-				line: 1,
-				lineBreaks: 0,
-				offset: 7,
-				text: 'procedure',
-				type: 'SQL_KEYWORDS',
+				type: ruleNames.sqlKeywordsOther,
 				value: 'procedure',
 			},
 			{
-				col: 17,
-				line: 1,
-				lineBreaks: 0,
-				offset: 16,
-				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 			{
-				col: 18,
-				line: 1,
-				lineBreaks: 0,
-				offset: 17,
-				text: 'foo',
-				type: 'IDENTIFIER',
+				type: ruleNames.identifier,
 				value: 'foo',
 			},
 			{
-				col: 21,
-				line: 1,
-				lineBreaks: 0,
-				offset: 20,
-				text: ' ',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: ' ',
 			},
 			{
-				col: 22,
-				line: 1,
-				lineBreaks: 0,
-				offset: 21,
-				text: 'is',
-				type: 'SQL_KEYWORDS',
+				type: ruleNames.sqlKeywordsOther,
 				value: 'is',
 			},
 			{
-				col: 24,
-				line: 1,
-				lineBreaks: 1,
-				offset: 23,
-				text: '\n',
-				type: 'NL',
+				type: ruleNames.nl,
 				value: '\n',
 			},
 			{
-				col: 1,
-				line: 2,
-				lineBreaks: 0,
-				offset: 24,
-				text: 'begin',
-				type: 'SQL_KEYWORDS_SLASH',
+				type: ruleNames.sqlKeywordsSlash,
 				value: 'begin',
 			},
 			{
-				col: 6,
-				line: 2,
-				lineBreaks: 1,
-				offset: 29,
-				text: '\n',
-				type: 'NL',
+				type: ruleNames.nl,
 				value: '\n',
 			},
 			{
-				col: 1,
-				line: 3,
-				lineBreaks: 0,
-				offset: 30,
-				text: '\t',
-				type: 'WS',
+				type: ruleNames.ws,
 				value: '\t',
 			},
 			{
-				col: 2,
-				line: 3,
-				lineBreaks: 0,
-				offset: 31,
-				text: 'null',
-				type: 'SQL_KEYWORDS',
+				type: ruleNames.sqlKeywordsOther,
 				value: 'null',
 			},
 			{
-				col: 6,
-				line: 3,
-				lineBreaks: 0,
-				offset: 35,
-				text: ';',
-				type: 'SEMICOLON',
+				type: ruleNames.semicolon,
 				value: ';',
 			},
 			{
-				col: 7,
-				line: 3,
-				lineBreaks: 1,
-				offset: 36,
-				text: '\n',
-				type: 'NL',
+				type: ruleNames.nl,
 				value: '\n',
 			},
 			{
-				col: 1,
-				line: 4,
-				lineBreaks: 0,
-				offset: 37,
-				text: 'end',
-				type: 'SQL_KEYWORDS',
+				type: ruleNames.sqlKeywordsOther,
 				value: 'end',
 			},
 			{
-				col: 4,
-				line: 4,
-				lineBreaks: 0,
-				offset: 40,
-				text: ';',
-				type: 'SEMICOLON',
+				type: ruleNames.semicolon,
 				value: ';',
 			},
 			{
-				col: 5,
-				line: 4,
-				lineBreaks: 1,
-				offset: 41,
-				text: '\n',
-				type: 'NL',
+				type: ruleNames.nl,
 				value: '\n',
 			},
 			{
-				col: 1,
-				line: 5,
-				lineBreaks: 0,
-				offset: 42,
-				text: '/',
-				type: 'SLASH',
+				type: ruleNames.sqlSlash,
 				value: '/',
 			},
 			{
-				col: 2,
-				line: 5,
-				lineBreaks: 1,
-				offset: 43,
-				text: '\n',
-				type: 'NL',
+				type: ruleNames.nl,
+				value: '\n',
+			},
+		]);
+	});
+
+	it('declare', () => {
+		expect.hasAssertions();
+
+		const script = `declare
+	i number;
+begin
+	i := 1 / 3;
+end;
+/
+`;
+
+		const tokens = getTokens(script, ['type', 'value']);
+
+		expect(tokens).toStrictEqual([
+			{
+				type: ruleNames.sqlKeywordsSlash,
+				value: 'declare',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+			{
+				type: ruleNames.ws,
+				value: '\t',
+			},
+			{
+				type: ruleNames.identifier,
+				value: 'i',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.sqlKeywordsOther,
+				value: 'number',
+			},
+			{
+				type: ruleNames.semicolon,
+				value: ';',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+			{
+				type: ruleNames.sqlKeywordsSlash,
+				value: 'begin',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+			{
+				type: ruleNames.ws,
+				value: '\t',
+			},
+			{
+				type: ruleNames.identifier,
+				value: 'i',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.operatorAssign,
+				value: ':=',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.number,
+				value: '1',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.operator,
+				value: '/',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.number,
+				value: '3',
+			},
+			{
+				type: ruleNames.semicolon,
+				value: ';',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+			{
+				type: ruleNames.sqlKeywordsOther,
+				value: 'end',
+			},
+			{
+				type: ruleNames.semicolon,
+				value: ';',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+			{
+				type: ruleNames.sqlSlash,
+				value: '/',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+		]);
+	});
+
+	it('disconnect', () => {
+		expect.hasAssertions();
+
+		const script = `spool foo.log
+spool off
+`;
+
+		const tokens = getTokens(script, ['type', 'value']);
+
+		expect(tokens).toStrictEqual([
+			{
+				type: ruleNames.sqlPlusKeywords,
+				value: 'spool',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.identifier,
+				value: 'foo',
+			},
+			{
+				type: ruleNames.dot,
+				value: '.',
+			},
+			{
+				type: ruleNames.identifier,
+				value: 'log',
+			},
+			{
+				type: ruleNames.nl,
+				value: '\n',
+			},
+			{
+				type: ruleNames.sqlPlusKeywords,
+				value: 'spool',
+			},
+			{
+				type: ruleNames.ws,
+				value: ' ',
+			},
+			{
+				type: ruleNames.identifier,
+				value: 'off',
+			},
+			{
+				type: ruleNames.nl,
 				value: '\n',
 			},
 		]);
 	});
 });
 
-function getTokens(text: string) {
+function getTokens(text: string, properties?: Array<string>) {
+	// get the tokens
 	const tokens = lexer(text);
 
-	tokens.forEach(e => delete e.toString);
+	const selectProperties = (token: moo.Token): Partial<moo.Token> => {
+		const keys = Object.keys(token);
+		const keysToKeep = keys.filter(key => properties ? properties.indexOf(key) !== -1 : key !== 'toString');
+		return _.pick(token, keysToKeep);
+	};
 
-	//console.log(`***** getTokens(${text}) = `, tokens);
+	const newTokens = tokens.map(selectProperties);
 
-	return tokens;
+	//console.log(`***** getTokens(${text}) = `, newTokens);
+
+	return newTokens;
 }

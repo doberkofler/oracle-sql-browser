@@ -1,7 +1,7 @@
 import {split} from '../src/sqlparser/lexer';
 
-describe('parser', () => {
-	it('split', () => {
+describe('split', () => {
+	it('lexer', () => {
 		expect.hasAssertions();
 
 		expect(split('')).toStrictEqual([]);
@@ -9,7 +9,9 @@ describe('parser', () => {
 		expect(split('  ')).toStrictEqual([]);
 		expect(split('\t\t')).toStrictEqual([]);
 		expect(split('\n\n')).toStrictEqual([]);
+	});
 
+	it('sql', () => {
 		expect(split('select sysdate from dual;')).toStrictEqual([
 			{
 				type: 'sql',
@@ -17,9 +19,7 @@ describe('parser', () => {
 			},
 		]);
 
-		expect(split(`select sysdate from dual;
-select * from users;
-update foo set bar = 'bar';`)).toStrictEqual([
+		expect(split(`select sysdate from dual; select * from users; update foo set bar = 'bar';`)).toStrictEqual([
 			{
 				type: 'sql',
 				text: 'select sysdate from dual;',
@@ -44,26 +44,33 @@ update foo set bar = 'bar';`)).toStrictEqual([
 				text: 'commit;',
 			},
 		]);
+	});
 
-		expect(split(`create procedure foo is
+	it('plsql', () => {
+		const script = `create procedure foo is
 begin
 	null;
 end;
 /
-`)).toStrictEqual([
+`;
+
+		expect(split(script)).toStrictEqual([
 			{
 				type: 'plsql',
 				text: 'create procedure foo is\nbegin\n\tnull;\nend;\n/',
 			},
 		]);
+	});
 
-		expect(split(`create procedure foo is
+	it('plsql and sql', () => {
+		const script = `create procedure foo is
 begin
 	null;
 end;
 /
 select * from user_errors;
-`)).toStrictEqual([
+`;
+		expect(split(script)).toStrictEqual([
 			{
 				type: 'plsql',
 				text: 'create procedure foo is\nbegin\n\tnull;\nend;\n/',
@@ -71,6 +78,17 @@ select * from user_errors;
 			{
 				type: 'sql',
 				text: 'select * from user_errors;',
+			},
+		]);
+	});
+
+	it('sqlplus', () => {
+		const script = `spool foo.log
+`;
+		expect(split(script)).toStrictEqual([
+			{
+				type: 'sqlplus',
+				text: 'spool foo.log\n',
 			},
 		]);
 	});

@@ -1,4 +1,31 @@
 import moo from 'moo';
+import _debug from 'debug';
+
+const debug = _debug('lexer');
+
+export enum ruleNames {
+	scomment = 'scomment',
+	mcomment = 'mcomment',
+	ws = 'ws',
+	nl = 'nl',
+	semicolon = 'semicolon',
+	dot = 'dot',
+	identifier = 'identifier',
+	singleString = 'singleString',
+	doubleString = 'doubleString',
+	number = 'number',
+	operator = 'operator',
+	operatorBraces = 'operatorBraces',
+	operatorAssign = 'operatorAssign',
+	operatorCompare = 'operatorCompare',
+	sqlSlash = 'sqlSlash',
+	sqlKeywordsSlash = 'sqlKeywordsSlash',
+	sqlKeywordsSemi = 'sqlKeywordsSemi',
+	sqlKeywordsOther = 'sqlKeywordsOther',
+	sqlPlusKeywords = 'sqlPlusKeywords',
+	unknown = 'unknown',
+//	syntaxError = 'syntaxError',
+}
 
 export enum BlockType {
 	sql = 'sql',
@@ -44,6 +71,7 @@ const sql_keywords = [
 	'replace',
 	'procedure', 'function', 'package', 'body', 'type',
 	'end', 'as', 'is',
+	'number', 'varchar2', 'date', 'boolean',
 	'null',
 	'sysdate',
 ].map(textToCaseInsensitiveRegex);
@@ -55,26 +83,28 @@ const sqlplus_keywords = [
 ].map(textToCaseInsensitiveRegex);
 
 const rules = {
-	SCOMMENT:			{match: /--.*?$/, lineBreaks: true},
-	MCOMMENT:			{match: /\/\*(?:.|[\r\n])*?\*\//, lineBreaks: true},
-	SSTRING:			{match: /'(?:\\['\\]|[^\n'\\])*'/, lineBreaks: true},
-	DSTRING:			{match: /"(?:\\["\\]|[^\n"\\])*"/, lineBreaks: true},
-	SEMICOLON: 			{match: /;/, lineBreaks: true},
-	SLASH: 				{match: /^[ \t]*\/[ \t]*$/, lineBreaks: true},
-	SQLPLUS_KEYWORDS:	{match: sqlplus_keywords, lineBreaks: true},
-	SQL_KEYWORDS_SLASH:	{match: sql_keywords_slash, lineBreaks: true},
-	SQL_KEYWORDS_SEMI:	{match: sql_keywords_semi, lineBreaks: true},
-	SQL_KEYWORDS:		{match: sql_keywords, lineBreaks: true},
-	STAR:				{match: '*', lineBreaks: true},
-	EQUAL:				{match: /=/, lineBreaks: true},
-	UNEQUAL:			{match: /[!=|<>]/, lineBreaks: true},
-	LESS:				{match: '<', lineBreaks: true},
-	LESS_EQUAL:			{match: '<=', lineBreaks: true},
-	GREATER:			{match: '>', lineBreaks: true},
-	GREATER_EQUAL:		{match: '>=', lineBreaks: true},
-	IDENTIFIER:			{match: /[a-zA-Z_$]+[a-zA-Z_$0-9]*/, lineBreaks: true},
-	WS:					{match: /[ \t]+/, lineBreaks: true},
-	NL:					{match: /\n/, lineBreaks: true},
+	[ruleNames.scomment]:			/--.*?$/,
+	[ruleNames.mcomment]:			{match: /\/\*(?:.|[\r\n])*?\*\//, lineBreaks: true},
+	[ruleNames.singleString]:		{match: /'(?:\\['\\]|[^\n'\\])*'/, lineBreaks: true},
+	[ruleNames.doubleString]:		{match: /"(?:\\["\\]|[^\n"\\])*"/, lineBreaks: true},
+	[ruleNames.sqlPlusKeywords]:	{match: sqlplus_keywords, lineBreaks: true},
+	[ruleNames.sqlSlash]:			{match: /^[ \t]*\/[ \t]*$/, lineBreaks: true},
+	[ruleNames.sqlKeywordsSlash]:	{match: sql_keywords_slash, lineBreaks: true},
+	[ruleNames.sqlKeywordsSemi]:	{match: sql_keywords_semi, lineBreaks: true},
+	[ruleNames.sqlKeywordsOther]:	{match: sql_keywords, lineBreaks: true},
+	[ruleNames.semicolon]: 			{match: /;/, lineBreaks: true},
+	[ruleNames.identifier]:			/[a-zA-Z_$]+[a-zA-Z_$0-9]*/,
+//	[ruleNames.number]:				/^([+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)$/,
+	[ruleNames.number]:				/[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?/,
+	[ruleNames.operator]:			/\+|-|\*|\//,
+	[ruleNames.operatorBraces]:		/\(|\)/,
+	[ruleNames.operatorAssign]:		':=',
+	[ruleNames.operatorCompare]:	/=|!=|<>|<|>|<=|>=/,
+	[ruleNames.dot]:				'.',
+	[ruleNames.ws]:					/[ \t]+/,
+	[ruleNames.nl]:					{match: /\n/, lineBreaks: true},
+	[ruleNames.unknown]:			{match: /.+/, lineBreaks: true},
+//	[ruleNames.syntaxError]:		moo.error, // return an error token instead of throwing an exception
 };
 
 const mooLexer = moo.compile(rules as unknown as moo.Rules);
@@ -84,13 +114,11 @@ export function lexer(text: string): Array<moo.Token> {
 
 	const tokens = Array.from(mooLexer);
 
-	//tokens.forEach(console.log);
-
 	return tokens;
 }
 
 export function split(text: string): Array<ScriptBlockType> {
-	console.log(`split "${text}"`);
+	debug(`split "${text}"`);
 
 	const blocks: Array<ScriptBlockType> = [];
 
@@ -103,14 +131,14 @@ export function split(text: string): Array<ScriptBlockType> {
 	while (i < tokenCount) {
 		const token = tokens[i];
 
-		console.log(`i=${i} token.type="${token.type}" token.text="${token.text}"`);
+		debug(`i=${i} token.type="${token.type}" token.text="${token.text}"`);
 
 		switch (token.type) {
-			case 'SQL_KEYWORDS_SLASH': {
-				// find the next semicolon
-				const result = findToken(tokens, tokenCount, i, 'SLASH');
+			case ruleNames.sqlKeywordsSlash: {
+				// find the next "sqlSlash" token
+				const result = findToken(tokens, tokenCount, i, ruleNames.sqlSlash);
 				if (result) {
-					console.log(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
+					debug(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
 					blocks.push({
 						type: BlockType.plsql,
 						text: result.text,
@@ -122,11 +150,11 @@ export function split(text: string): Array<ScriptBlockType> {
 				break;
 			}
 
-			case 'SQL_KEYWORDS_SEMI': {
-				// find the next semicolon
-				const result = findToken(tokens, tokenCount, i, 'SEMICOLON');
+			case ruleNames.sqlKeywordsSemi: {
+				// find the next "semicolon" token
+				const result = findToken(tokens, tokenCount, i, ruleNames.semicolon);
 				if (result) {
-					console.log(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
+					debug(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
 					blocks.push({
 						type: BlockType.sql,
 						text: result.text,
@@ -138,6 +166,22 @@ export function split(text: string): Array<ScriptBlockType> {
 				break;
 			}
 
+			case ruleNames.sqlPlusKeywords: {
+				// find the next "nl" token
+				const result = findToken(tokens, tokenCount, i, ruleNames.nl);
+				if (result) {
+					debug(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
+					blocks.push({
+						type: BlockType.sqlplus,
+						text: result.text,
+					});
+					i = result.index;
+				} else {
+					throw new Error(`${token.line}:${token.col} - The ${token.text.toLowerCase()} statement is not followed by a nl`);
+				}
+				break;
+			}
+
 			default:
 				break;
 		}
@@ -145,7 +189,7 @@ export function split(text: string): Array<ScriptBlockType> {
 		i++;
 	}
 
-	console.log('split returned:', blocks);
+	debug('split returned:', blocks);
 
 	return blocks;
 }
