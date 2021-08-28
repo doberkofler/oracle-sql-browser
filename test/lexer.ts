@@ -1,5 +1,4 @@
-import {lexer, ruleNames} from '../src/sqlparser/lexer';
-import _ from 'lodash';
+import {getTokens, ruleNames} from '../src/sqlparser/lexer';
 
 describe('lexer', () => {
 	it('ws and nl', () => {
@@ -508,7 +507,7 @@ end;
 		]);
 	});
 
-	it('disconnect', () => {
+	it('spool', () => {
 		expect.hasAssertions();
 
 		const script = `spool foo.log
@@ -561,20 +560,3 @@ spool off
 		]);
 	});
 });
-
-function getTokens(text: string, properties?: Array<string>) {
-	// get the tokens
-	const tokens = lexer(text);
-
-	const selectProperties = (token: moo.Token): Partial<moo.Token> => {
-		const keys = Object.keys(token);
-		const keysToKeep = keys.filter(key => properties ? properties.indexOf(key) !== -1 : key !== 'toString');
-		return _.pick(token, keysToKeep);
-	};
-
-	const newTokens = tokens.map(selectProperties);
-
-	//console.log(`***** getTokens(${text}) = `, newTokens);
-
-	return newTokens;
-}

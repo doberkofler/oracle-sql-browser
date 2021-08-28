@@ -5,8 +5,10 @@ import {getDefaultSettings,loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
 import {renderTabs} from './tabs';
 import {Database} from './database';
-import {runStatement} from './runStatement';
+import {executeScript} from './runStatement';
+import {runStatementSql, executeCommit, executeRollback} from './runStatementSql';
 import {channel, menuOption} from './constants';
+import {databaseConnect, databaseDisconnect} from './connect';
 
 import type {stateType} from './state';
 
@@ -24,7 +26,7 @@ async function cmdConnect(database: Database, state: stateType): Promise<void> {
 	}
  
 	// connect
-	const result = await connectWithDatabase(database, state.settings.connectString);
+	const result = await databaseConnect(database, state.settings.connectString);
 	getTableElement(state.settings.currentPageId).innerHTML = result;
 
 	// save the settings
@@ -35,9 +37,7 @@ async function cmdConnect(database: Database, state: stateType): Promise<void> {
 *	Execute the "disconnect" command
 */
 async function cmdDisconnect(database: Database, state: stateType): Promise<void> {
-	if (database.isConnected()) {
-		await database.disconnect();
-	}
+	await databaseDisconnect(database);
  
 	getTableElement(state.settings.currentPageId).innerHTML = 'Disconnected';
 }
@@ -74,33 +74,6 @@ async function cmdExport(pageId: number) {
 }
  
 /*
-*	Connect with the database
-*/
-async function connectWithDatabase(database: Database, connectString: string): Promise<string> {
-	// parse the connection string
-	let result;
-	try {
-		result = Database.parseConnectString(connectString);
-	} catch (e) {
-		return `Connection error:&nbsp;${e.message}`;
-	}
- 
-	// disconnect, if already connected
-	if (database.isConnected()) {
-		database.disconnect();
-	}
- 
-	// connect
-	try {
-		await database.connect(result.user, result.password, result.connectString);
-	} catch (e) {
-		return `Connection error:&nbsp;${e.message}`;
-	}
-
-	return `Successfully connected as ${result.user}.`;
-}
-
-/*
 *	render
 */
 async function render(): Promise<void> {
@@ -108,6 +81,8 @@ async function render(): Promise<void> {
 	const state: stateType = {
 		settings: await loadSettings(),
 	};
+
+	let resultHtml = '';
 
 	// listen to messages from main process 
 	ipcRenderer.on(channel.menu, async (event, message: string) => {
@@ -125,15 +100,15 @@ async function render(): Promise<void> {
 			break;
 	
 		case menuOption.run:
-			await runStatement(database, state.settings.pages[state.settings.currentPageId].statement, getTableElement(state.settings.currentPageId));
+			resultHtml = await executeScript(database, state.settings.pages[state.settings.currentPageId].statement);
 			break;
 
 		case menuOption.commit:
-			await runStatement(database, 'commit', getTableElement(state.settings.currentPageId));
+			resultHtml = await executeCommit(database);
 			break;
 
 		case menuOption.rollback:
-			await runStatement(database, 'rollback', getTableElement(state.settings.currentPageId));
+			resultHtml = await executeRollback(database);
 			break;
 	
 		case menuOption.export:
@@ -145,6 +120,12 @@ async function render(): Promise<void> {
 
 		default:
 			throw new Error(`The channel "${channel.menu}" received an unrecongnized message "${message}"`);
+		}
+
+		// update result panel
+		if (resultHtml.length > 0) {
+			const resultElement = getTableElement(state.settings.currentPageId);
+			resultElement.innerHTML = resultHtml;
 		}
 	});
 
@@ -164,7 +145,7 @@ async function render(): Promise<void> {
 
 	// connect
 	if (state.settings.connectString.length > 0) {
-		const result = await connectWithDatabase(database, state.settings.connectString);
+		const result = await databaseConnect(database, state.settings.connectString);
 		getTableElement(state.settings.currentPageId).innerHTML = result;
 	}
 }

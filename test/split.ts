@@ -1,25 +1,59 @@
 import {split} from '../src/sqlparser/lexer';
 
+import type {ScriptBlockType} from '../src/sqlparser/lexer';
+
+type TypeAndTextType = Pick<ScriptBlockType, 'type' | 'text'>;
+
+const  splitTypeAndText = (text: string): Array<TypeAndTextType> => split(text).map(e => ({type: e.type, text: e.text}));
+
 describe('split', () => {
-	it('lexer', () => {
+	it('separators', () => {
 		expect.hasAssertions();
 
-		expect(split('')).toStrictEqual([]);
-		expect(split(' ')).toStrictEqual([]);
-		expect(split('  ')).toStrictEqual([]);
-		expect(split('\t\t')).toStrictEqual([]);
-		expect(split('\n\n')).toStrictEqual([]);
+		expect(splitTypeAndText('')).toStrictEqual([]);
+		expect(splitTypeAndText(' ')).toStrictEqual([]);
+		expect(splitTypeAndText('  ')).toStrictEqual([]);
+		expect(splitTypeAndText('\t\t')).toStrictEqual([]);
+		expect(splitTypeAndText('\n\n')).toStrictEqual([]);
+	});
+
+	it('sqlplus, sql and pl/sql', () => {
+		expect.hasAssertions();
+
+		const script = `connect user/password@host
+select sysdate from dual;
+create procedure foo is
+begin
+	null;
+end;
+/
+`;
+
+		expect(splitTypeAndText(script)).toStrictEqual([
+			{
+				type: 'sqlplus',
+				text: 'connect user/password@host\n',
+			},
+			{
+				type: 'sql',
+				text: 'select sysdate from dual;',
+			},
+			{
+				type: 'plsql',
+				text: 'create procedure foo is\nbegin\n\tnull;\nend;\n/',
+			},
+		]);
 	});
 
 	it('sql', () => {
-		expect(split('select sysdate from dual;')).toStrictEqual([
+		expect(splitTypeAndText('select sysdate from dual;')).toStrictEqual([
 			{
 				type: 'sql',
 				text: 'select sysdate from dual;',
 			},
 		]);
 
-		expect(split(`select sysdate from dual; select * from users; update foo set bar = 'bar';`)).toStrictEqual([
+		expect(splitTypeAndText(`select sysdate from dual; select * from users; update foo set bar = 'bar';`)).toStrictEqual([
 			{
 				type: 'sql',
 				text: 'select sysdate from dual;',
@@ -34,7 +68,7 @@ describe('split', () => {
 			},
 		]);
 
-		expect(split('select sysdate from dual;commit;')).toStrictEqual([
+		expect(splitTypeAndText('select sysdate from dual;commit;')).toStrictEqual([
 			{
 				type: 'sql',
 				text: 'select sysdate from dual;',
@@ -54,7 +88,7 @@ end;
 /
 `;
 
-		expect(split(script)).toStrictEqual([
+		expect(splitTypeAndText(script)).toStrictEqual([
 			{
 				type: 'plsql',
 				text: 'create procedure foo is\nbegin\n\tnull;\nend;\n/',
@@ -70,7 +104,7 @@ end;
 /
 select * from user_errors;
 `;
-		expect(split(script)).toStrictEqual([
+		expect(splitTypeAndText(script)).toStrictEqual([
 			{
 				type: 'plsql',
 				text: 'create procedure foo is\nbegin\n\tnull;\nend;\n/',
@@ -85,7 +119,7 @@ select * from user_errors;
 	it('sqlplus', () => {
 		const script = `spool foo.log
 `;
-		expect(split(script)).toStrictEqual([
+		expect(splitTypeAndText(script)).toStrictEqual([
 			{
 				type: 'sqlplus',
 				text: 'spool foo.log\n',

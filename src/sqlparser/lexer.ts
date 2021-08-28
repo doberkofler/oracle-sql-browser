@@ -1,4 +1,5 @@
 import moo from 'moo';
+import _ from 'lodash';
 import _debug from 'debug';
 
 const debug = _debug('lexer');
@@ -32,8 +33,14 @@ export enum BlockType {
 	plsql = 'plsql',
 	sqlplus = 'sqlplus',
 }
+export type ResultType = {
+	tokens: Array<moo.Token>,
+	index: number,
+	text: string, 
+}
 export type ScriptBlockType = {
 	type: BlockType,
+	tokens: Array<moo.Token>,
 	text: string,
 }
 
@@ -109,6 +116,23 @@ const rules = {
 
 const mooLexer = moo.compile(rules as unknown as moo.Rules);
 
+export function getTokens(text: string, properties?: Array<string>): Partial<moo.Token> {
+	// get the tokens
+	const tokens = lexer(text);
+
+	const selectProperties = (token: moo.Token): Partial<moo.Token> => {
+		const keys = Object.keys(token);
+		const keysToKeep = keys.filter(key => properties ? properties.indexOf(key) !== -1 : key !== 'toString');
+		return _.pick(token, keysToKeep);
+	};
+
+	const newTokens = tokens.map(selectProperties);
+
+	//console.log(`***** getTokens(${text}) = `, newTokens);
+
+	return newTokens;
+}
+
 export function lexer(text: string): Array<moo.Token> {
 	mooLexer.reset(text);
 
@@ -120,12 +144,15 @@ export function lexer(text: string): Array<moo.Token> {
 export function split(text: string): Array<ScriptBlockType> {
 	debug(`split "${text}"`);
 
-	const blocks: Array<ScriptBlockType> = [];
+	if (text[text.length - 1] !== '\n') {
+		text += '\n';
+	}
 
 	// tokenize the script
 	const tokens = lexer(text);
 
 	// process the tokens
+	const blocks: Array<ScriptBlockType> = [];
 	const tokenCount = tokens.length;
 	let i = 0;
 	while (i < tokenCount) {
@@ -141,6 +168,7 @@ export function split(text: string): Array<ScriptBlockType> {
 					debug(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
 					blocks.push({
 						type: BlockType.plsql,
+						tokens: result.tokens,
 						text: result.text,
 					});
 					i = result.index;
@@ -157,6 +185,7 @@ export function split(text: string): Array<ScriptBlockType> {
 					debug(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
 					blocks.push({
 						type: BlockType.sql,
+						tokens: result.tokens,
 						text: result.text,
 					});
 					i = result.index;
@@ -173,6 +202,7 @@ export function split(text: string): Array<ScriptBlockType> {
 					debug(`${token.text.toUpperCase()}: result.text=${result.text} result.index="${result.index}"`);
 					blocks.push({
 						type: BlockType.sqlplus,
+						tokens: result.tokens,
 						text: result.text,
 					});
 					i = result.index;
@@ -197,16 +227,43 @@ export function split(text: string): Array<ScriptBlockType> {
 /*
 *	Find a token with the property "type" equal to the "type" argument startig with the token with index "start".
 */
-function findToken(tokens: Array<moo.Token>, tokenCount: number, start: number, type: string): {text: string, index: number}|undefined {
-	let text = '';
+function findToken(tokens: Array<moo.Token>, tokenCount: number, start: number, type: string): ResultType|undefined {
+	const resultTokens: Array<moo.Token> = [];
+	let resultText = '';
 
 	for (let i = start; i < tokenCount; i++) {
 		const token = tokens[i];
-		text += token.text;
+
+		resultTokens.push(token);
+		resultText += token.text;
+		
 		if (token.type === type) {
-			return {text, index: i};
+			return {
+				tokens: resultTokens,
+				text: resultText,
+				index: i,
+			};
 		}
 	}
 
 	return undefined;
+}
+
+/*
+*	Get the text of all tokens starting with the n-th token until the end of the tokens or the given end type.
+*/
+export function getText(tokens: Array<moo.Token>, start = 0, endType = ''): string {
+	let text = '';
+
+	for (let i = start; i < tokens.length; i++) {
+		const token = tokens[i];
+
+		if (endType !== '' && token.type === endType) {
+			break;
+		}
+
+		text += token.text;
+	}
+
+	return text;
 }
