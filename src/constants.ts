@@ -5,7 +5,8 @@ export enum channel {
 export enum menuOption {
 	connect = 'connect',
 	disconnect = 'disconnect',
-	run = 'run',
+	runScript = 'runScript',
+	runStatement = 'runStatement',
 	commit = 'commit',
 	rollback = 'rollback',
 	closeAllTabs = 'closeAllTabs',

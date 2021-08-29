@@ -1,27 +1,47 @@
-import {split, BlockType} from './sqlparser/lexer';
+import {BlockType, split, getBlockRange} from './sqlparser/split';
 import {Database} from './database';
 import {runStatementSqlPlus} from './runStatementSqlPlus';
 import {runStatementSql} from './runStatementSql';
 
+import type {pageType} from './settings'; 
 import type {ScriptBlockType} from './sqlparser/lexer';
 
+export enum RunType {
+	RunScript = 'RunScript',
+	RunOneStatement = 'RunOneStatement',
+}
+
 /*
-*	Execute arbistrary script
+*	Execute script
 */
-export async function executeScript(database: Database, script: string): Promise<string> {
+export async function execute(database: Database, page: pageType, runType: RunType): Promise<string> {
 	// split the script into blocks
-	let blocks;
+	let allBlocks: Array<ScriptBlockType>;
 	try {
-		blocks = split(script);
+		allBlocks = split(page.statement);
 	} catch (err) {
 		return err.message;
 	}
 
-	// process each block
+	// what shoud be executed
+	let blocksToExecute: Array<ScriptBlockType>;
 	let resultHtml = '';
-	for (const block of blocks) {
+	switch (runType) {
+		case RunType.RunScript:
+			break;
+
+		case RunType.RunOneStatement:
+			blocksToExecute = getBlockRange(allBlocks, page.selectionStart);
+			break;
+
+		default:
+			throw new Error(`Invalid run type "${runType}"`);
+	}
+
+	// execute blocks
+	for (const block of blocksToExecute) {
 		try {
-			resultHtml = await executeScriptBlock(database, block);
+			resultHtml = await runBlock(database, block);
 		} catch (err) {
 			return err.message;
 		}
@@ -34,7 +54,7 @@ export async function executeScript(database: Database, script: string): Promise
 /*
 *	Execute script block
 */
-async function executeScriptBlock(database: Database, block: ScriptBlockType): Promise<string> {
+async function runBlock(database: Database, block: ScriptBlockType): Promise<string> {
 	switch (block.type) {
 		case BlockType.sqlplus:
 			return runStatementSqlPlus(database, block);

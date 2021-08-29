@@ -1,12 +1,13 @@
 import {remote, ipcRenderer} from 'electron';
+import {getCurrentWindow} from './utilities';
 import XLSX from 'xlsx';
 import {onDomReady, querySelector} from './dom';
 import {getDefaultSettings,loadSettings, saveSettings} from './settings';
 import {createDialog} from './dialog';
 import {renderTabs} from './tabs';
 import {Database} from './database';
-import {executeScript} from './runStatement';
-import {runStatementSql, executeCommit, executeRollback} from './runStatementSql';
+import {RunType, execute} from './runStatement';
+import {executeCommit, executeRollback} from './runStatementSql';
 import {channel, menuOption} from './constants';
 import {databaseConnect, databaseDisconnect} from './connect';
 
@@ -19,7 +20,7 @@ const database = new Database();
 */
 async function cmdConnect(database: Database, state: stateType): Promise<void> {
 	// prompt for a connection string
-	const currentWindow = remote.getCurrentWindow();
+	const currentWindow = getCurrentWindow();
 	state.settings.connectString = await createDialog(currentWindow, state.settings.connectString);
 	if (state.settings.connectString === null) {
 		return;
@@ -28,9 +29,6 @@ async function cmdConnect(database: Database, state: stateType): Promise<void> {
 	// connect
 	const result = await databaseConnect(database, state.settings.connectString);
 	getTableElement(state.settings.currentPageId).innerHTML = result;
-
-	// save the settings
-	await saveSettings({connectString: state.settings.connectString});
 }
 
 /*
@@ -57,7 +55,7 @@ async function cmdCloseAllTabs(state: stateType): Promise<void> {
 }
 
 /*
-*
+*	Export results to an Excel file
 */
 async function cmdExport(pageId: number) {
 	const tableElement = getTableElement(pageId);
@@ -99,11 +97,15 @@ async function render(): Promise<void> {
 			await cmdCloseAllTabs(state);
 			break;
 	
-		case menuOption.run:
-			resultHtml = await executeScript(database, state.settings.pages[state.settings.currentPageId].statement);
+		case menuOption.runScript:
+			resultHtml = await execute(database, state.settings.pages[state.settings.currentPageId], RunType.RunScript);
 			break;
 
-		case menuOption.commit:
+		case menuOption.runStatement:
+			resultHtml = await execute(database, state.settings.pages[state.settings.currentPageId], RunType.RunOneStatement);
+			break;
+	
+			case menuOption.commit:
 			resultHtml = await executeCommit(database);
 			break;
 

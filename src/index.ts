@@ -1,8 +1,7 @@
-import {app, BrowserWindow, Menu, shell} from 'electron';
-import defaultMenu from 'electron-default-menu';
+import {app, BrowserWindow} from 'electron';
 import {loadSettings, saveSettings} from './settings';
-import {channel, menuOption} from './constants';
 import * as path from 'path';
+import {createApplicationMenu} from './applicationMenu';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
@@ -62,72 +61,6 @@ async function createWindow(): Promise<void> {
 	mainWindow.on('resize', saveWindowStatus);
 	mainWindow.on('move', saveWindowStatus);
 	mainWindow.on('close', saveWindowStatus);
-}
-
-/*
-*	Create application menu
-*/
-function createApplicationMenu(mainWindow: BrowserWindow): void {
-	const menu = defaultMenu(app, shell);
-
-	menu.splice(1, 0, {
-		label: 'File',
-		submenu: [
-			{
-				label: 'Connect',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.connect);
-				},
-			},
-			{
-				label: 'Disconnect',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.disconnect);
-				},
-			},
-			{
-				label: 'Close all tabs',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.closeAllTabs);
-				},
-			},
-		]
-	});
-
-	menu.splice(2, 0, {
-		label: 'Script',
-		submenu: [
-			{
-				label: 'Run',
-				accelerator: 'Control+Enter',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.run);
-				},
-			},
-			{
-				label: 'Commit',
-				accelerator: 'Control+C',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.commit);
-				},
-			},
-			{
-				label: 'Rollback',
-				accelerator: 'Control+R',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.rollback);
-				},
-			},
-			{
-				label: 'Export',
-				click: (/*item, focusedWindow*/) => {
-					mainWindow.webContents.send(channel.menu, menuOption.export);
-				},
-			},
-		]
-	});
-
-	Menu.setApplicationMenu(Menu.buildFromTemplate(menu));	
 }
 
 // This method will be called when Electron has finished

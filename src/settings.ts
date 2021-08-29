@@ -10,6 +10,8 @@ import storage from 'electron-json-storage';
 export type pageType = {
 	name: string;
 	statement: string;
+	selectionStart: number;
+	selectionEnd: number;
 	editorSizePct: number;
 };
 
@@ -57,6 +59,8 @@ export function addPage(settings: settingsType): pageType {
 	const page = {
 		name: `Query ${settings.pages.length + 1}`,
 		statement: '',
+		selectionStart: 0,
+		selectionEnd: 0,
 		editorSizePct: 30,
 	};
 

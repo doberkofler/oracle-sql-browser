@@ -225,8 +225,16 @@ function addTabListener(database: Database, settings: settingsType, currentPageI
 	// save statement
 	const editorElement = getEditorElement(currentPageId);
 	editorElement.addEventListener('keyup', () => {
-		// upfdate state with current statement
+		// update state with current statement
 		page.statement = editorElement.value;
+
+		// get the cursor index
+		if (typeof editorElement.selectionStart === 'number') {
+			page.selectionStart = editorElement.selectionStart;
+		}
+		if (typeof editorElement.selectionEnd === 'number') {
+			page.selectionEnd = editorElement.selectionEnd;
+		}
 
 		// save settings but debounce
 		saveSettingsDebounced(settings);

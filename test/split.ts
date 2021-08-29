@@ -1,4 +1,4 @@
-import {split} from '../src/sqlparser/lexer';
+import {split, getBlockRange} from '../src/sqlparser/split';
 
 import type {ScriptBlockType} from '../src/sqlparser/lexer';
 
@@ -125,5 +125,56 @@ select * from user_errors;
 				text: 'spool foo.log\n',
 			},
 		]);
+	});
+});
+
+describe('getBlockRange', () => {
+	const testBlocks = split('select "line1" from dual;\nselect "line02" from dual;\nselect "line003" from dual;\n');	
+
+	it('should have valid offsets', () => {
+		expect.hasAssertions();
+
+		expect(testBlocks).toHaveLength(3);
+
+		expect(testBlocks[0].text).toStrictEqual('select "line1" from dual;');
+		expect(testBlocks[0].tokens).toHaveLength(8);
+		expect(testBlocks[0].tokens[0].offset).toStrictEqual(0);
+		expect(testBlocks[0].tokens[testBlocks[0].tokens.length - 1].offset).toStrictEqual(24);
+
+		expect(testBlocks[1].text).toStrictEqual('select "line02" from dual;');
+		expect(testBlocks[1].tokens).toHaveLength(8);
+		expect(testBlocks[1].tokens[0].offset).toStrictEqual(26);
+		expect(testBlocks[1].tokens[testBlocks[1].tokens.length - 1].offset).toStrictEqual(51);
+
+		expect(testBlocks[2].text).toStrictEqual('select "line003" from dual;');
+		expect(testBlocks[2].tokens).toHaveLength(8);
+		expect(testBlocks[2].tokens[0].offset).toStrictEqual(53);
+		expect(testBlocks[2].tokens[testBlocks[2].tokens.length - 1].offset).toStrictEqual(79);
+	});
+
+	it('should return tokens in the given offset', () => {
+		expect.hasAssertions();
+
+		expect(getBlockRange(testBlocks, -1)).toHaveLength(0);
+
+		expect(getBlockRange(testBlocks, 0)).toHaveLength(1);
+		expect(getBlockRange(testBlocks, 0)[0].text).toStrictEqual('select "line1" from dual;');
+
+		expect(getBlockRange(testBlocks, 25)).toHaveLength(1);
+		expect(getBlockRange(testBlocks, 25)[0].text).toStrictEqual('select "line1" from dual;');
+
+		expect(getBlockRange(testBlocks, 26)).toHaveLength(1);
+		expect(getBlockRange(testBlocks, 26)[0].text).toStrictEqual('select "line02" from dual;');
+
+		expect(getBlockRange(testBlocks, 52)).toHaveLength(1);
+		expect(getBlockRange(testBlocks, 52)[0].text).toStrictEqual('select "line02" from dual;');
+
+		expect(getBlockRange(testBlocks, 53)).toHaveLength(1);
+		expect(getBlockRange(testBlocks, 53)[0].text).toStrictEqual('select "line003" from dual;');
+
+		expect(getBlockRange(testBlocks, 79)).toHaveLength(1);
+		expect(getBlockRange(testBlocks, 79)[0].text).toStrictEqual('select "line003" from dual;');
+
+		expect(getBlockRange(testBlocks, 81)).toHaveLength(0);
 	});
 });
