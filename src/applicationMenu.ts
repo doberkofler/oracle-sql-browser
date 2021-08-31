@@ -43,7 +43,7 @@ export function createApplicationMenu(mainWindow: BrowserWindow): void {
 				},
 			},
 			{
-				label: 'Run obe statement at current cursor position',
+				label: 'Run one statement at current cursor position',
 				accelerator: 'Control+Enter',
 				click: (/*item, focusedWindow*/) => {
 					mainWindow.webContents.send(channel.menu, menuOption.runStatement);
