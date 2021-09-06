@@ -9,7 +9,9 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts .",
+    "lint": "npm run eslint && npm run type-check",
+    "eslint": "eslint --report-unused-disable-directives \"./src/**/*.{ts, tsx}\"",
+    "type-check": "tsc --noEmit",
     "jison": "jison -m commonjs ./src/sqlparser/sqlParser.jison -o ./src/sqlparser/sqlParser.js",
     "test": "jest"
   },
