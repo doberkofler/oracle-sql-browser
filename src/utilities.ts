@@ -1,8 +1,18 @@
-import {app, remote, BrowserWindow, ipcRenderer} from 'electron';
+import {app, dialog, BrowserWindow, Dialog, ipcRenderer} from 'electron';
 import {channel} from './constants';
 
+export function getDialog(): Dialog {
+	if (dialog) {
+		return dialog;
+	}
+
+	return require('@electron/remote').dialog; // eslint-disable-line @typescript-eslint/no-var-requires
+}
+
 export function getCurrentWindow(): BrowserWindow {
-	return remote.getCurrentWindow();
+	const {getCurrentWindow} = require('@electron/remote'); // eslint-disable-line @typescript-eslint/no-var-requires
+
+	return getCurrentWindow();
 }
 
 export function setMainWindowTitle(title: string): void {

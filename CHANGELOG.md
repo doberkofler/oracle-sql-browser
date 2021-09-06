@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.0.2] - 2021-??-??
 
 ### Added
+- Support for connect and disconnect commands in the editor
+- Support execution of individual astatements and all statements in editor
 - Support for multiple tabs.
 - Support for CLOB columns.
 - Support for Insert, Update, Delete, Commit and Rollback.
@@ -16,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 ### Fixed
+- Catch error when Oracle client cannot be found
 
 
 ## [0.0.1] - 2021-03-19

@@ -1,9 +1,9 @@
-import {remote, ipcRenderer} from 'electron';
-import {getCurrentWindow} from './utilities';
+import {ipcRenderer} from 'electron';
+import {getCurrentWindow, getDialog} from './utilities';
 import XLSX from 'xlsx';
 import {onDomReady, querySelector} from './dom';
 import {getDefaultSettings,loadSettings, saveSettings} from './settings';
-import {createDialog} from './dialog';
+import {createConnectDialog} from './connectDialog';
 import {renderTabs} from './tabs';
 import {Database} from './database';
 import {RunType, execute} from './runStatement';
@@ -21,7 +21,7 @@ const database = new Database();
 async function cmdConnect(database: Database, state: stateType): Promise<void> {
 	// prompt for a connection string
 	const currentWindow = getCurrentWindow();
-	state.settings.connectString = await createDialog(currentWindow, state.settings.connectString);
+	state.settings.connectString = await createConnectDialog(currentWindow, state.settings.connectString);
 	if (state.settings.connectString === null) {
 		return;
 	}
@@ -60,7 +60,7 @@ async function cmdCloseAllTabs(state: stateType): Promise<void> {
 async function cmdExport(pageId: number) {
 	const tableElement = getTableElement(pageId);
 	const wb = XLSX.utils.table_to_book(tableElement);
-	const file = await remote.dialog.showSaveDialog({
+	const file = await getDialog().showSaveDialog({
 		title: 'Save file as',
 		filters: [{
 			name: 'Spreadsheets',

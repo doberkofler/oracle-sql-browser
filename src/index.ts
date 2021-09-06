@@ -5,6 +5,8 @@ import * as path from 'path';
 import {createApplicationMenu} from './applicationMenu';
 import {channel} from './constants';
 
+require('@electron/remote/main').initialize(); // eslint-disable-line @typescript-eslint/no-var-requires
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
 	app.quit();

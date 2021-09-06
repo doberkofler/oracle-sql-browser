@@ -2,10 +2,9 @@ import electron from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 
-const browserWindow = electron.BrowserWindow || electron.remote.BrowserWindow;
-const ipcMain = electron.ipcMain || electron.remote.ipcMain;
+export function createConnectDialog(parent: electron.BrowserWindow, connectString: string): Promise<string|null> {
+	const {BrowserWindow, ipcMain} = require('@electron/remote'); // eslint-disable-line @typescript-eslint/no-var-requires
 
-export function createDialog(parent: electron.BrowserWindow, connectString: string): Promise<string|null> {
 	return new Promise((resolve, reject) => {
 		const id = `${new Date().getTime()}-${Math.random()}`;
 		const preloadFilename = path.resolve(__dirname, 'renderer.js');
@@ -16,7 +15,7 @@ export function createDialog(parent: electron.BrowserWindow, connectString: stri
 		console.log(`htmlFilename="${htmlFilename}"`);
 		*/
 
-		let dialogWindow = new browserWindow({
+		let dialogWindow = new BrowserWindow({
 			parent,
 			modal: true,
 			height: 200,
@@ -81,7 +80,7 @@ export function createDialog(parent: electron.BrowserWindow, connectString: stri
 		const promptUrl = url.format({
 			protocol: 'file',
 			slashes: true,
-			pathname: path.resolve(__dirname, '../../src/dialog', 'index.html'),
+			pathname: path.resolve(__dirname, '../../src/connectDialog', 'index.html'),
 			hash: id,
 		});
 
