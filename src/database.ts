@@ -1,7 +1,7 @@
 import oracledb from 'oracledb';
 import path from 'path';
 import type {Connection} from 'oracledb';
-import {isDebug} from './utilities';
+import {isPackaged} from './utilities';
 
 export type Oracle$RowType = {[key: string]: any}; // eslint-disable-line @typescript-eslint/no-explicit-any
 export type Oracle$MetaType = {
@@ -28,7 +28,7 @@ export class Database {
 		// This synchronous function loads and initializes the Oracle Client libraries that are necessary
 		//	for node-oracledb to communicate with Oracle Database.
 		oracledb.initOracleClient({
-			libDir: isDebug() ? path.join(__dirname, '../instantclient_19_8') : path.join(process.resourcesPath, 'instantclient_19_8')
+			libDir: !isPackaged() ? path.join(__dirname, '../instantclient_19_8') : path.join(process.resourcesPath, 'instantclient_19_8')
 		});
 	}
 

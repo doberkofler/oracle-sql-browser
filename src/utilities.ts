@@ -12,15 +12,15 @@ export function setMainWindowTitle(title: string): void {
 	mainWindow.setTitle(fullTitle);
 }
 
-export function isDebug(): boolean {
-	if (app) {
-		return !app.isPackaged;
-	}
+export function isPackaged(): boolean {
+	return app ? app.isPackaged : isPackagedRemote();
+}
 
+function isPackagedRemote(): boolean {
 	const isPackaged = ipcRenderer.sendSync(channel.appIsPackaged);
 	if (typeof isPackaged !== 'boolean') {
 		throw new Error(`Error in ipc channel "${channel.appIsPackaged}"`);
 	}
 
-	return !isPackaged;
+	return isPackaged;
 }
