@@ -1,5 +1,6 @@
 export enum channel {
-	menu = 'menu',
+	menu = 'ipc-channel:menu',
+	appIsPackaged = 'ipc-channel:isPackaged',
 }
 
 export enum menuOption {

@@ -1,10 +1,11 @@
-import {app, BrowserWindow} from 'electron';
+import {app, BrowserWindow, ipcMain} from 'electron';
 import {loadSettings, saveSettings} from './settings';
 import * as path from 'path';
 import {createApplicationMenu} from './applicationMenu';
+import {channel} from './constants';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+if (require('electron-squirrel-startup')) {
 	app.quit();
 }
 
@@ -61,6 +62,9 @@ async function createWindow(): Promise<void> {
 	mainWindow.on('resize', saveWindowStatus);
 	mainWindow.on('move', saveWindowStatus);
 	mainWindow.on('close', saveWindowStatus);
+
+	// ipc channel
+	ipcMain.on(channel.appIsPackaged, event => event.returnValue = app.isPackaged);
 }
 
 // This method will be called when Electron has finished
@@ -84,6 +88,3 @@ app.on('activate', () => {
 		createWindow();
 	}
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

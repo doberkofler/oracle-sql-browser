@@ -5,7 +5,7 @@ import * as url from 'url';
 const browserWindow = electron.BrowserWindow || electron.remote.BrowserWindow;
 const ipcMain = electron.ipcMain || electron.remote.ipcMain;
 
-export function createDialog(parent: electron.BrowserWindow, connectString: string): Promise<string|null> { // eslint-disable-line @typescript-eslint/no-explicit-any
+export function createDialog(parent: electron.BrowserWindow, connectString: string): Promise<string|null> {
 	return new Promise((resolve, reject) => {
 		const id = `${new Date().getTime()}-${Math.random()}`;
 		const preloadFilename = path.resolve(__dirname, 'renderer.js');

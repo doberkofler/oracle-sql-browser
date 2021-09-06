@@ -1,4 +1,5 @@
-import {app, remote, BrowserWindow} from 'electron';
+import {app, remote, BrowserWindow, ipcRenderer} from 'electron';
+import {channel} from './constants';
 
 export function getCurrentWindow(): BrowserWindow {
 	return remote.getCurrentWindow();
@@ -12,5 +13,14 @@ export function setMainWindowTitle(title: string): void {
 }
 
 export function isDebug(): boolean {
-	return app ? !app.isPackaged : !remote.app.isPackaged;
+	if (app) {
+		return !app.isPackaged;
+	}
+
+	const isPackaged = ipcRenderer.sendSync(channel.appIsPackaged);
+	if (typeof isPackaged !== 'boolean') {
+		throw new Error(`Error in ipc channel "${channel.appIsPackaged}"`);
+	}
+
+	return !isPackaged;
 }
