@@ -1,6 +1,7 @@
 export enum channel {
 	menu = 'ipc-channel:menu',
 	appIsPackaged = 'ipc-channel:isPackaged',
+	setMainWindowTitle = 'ipc-channel:setMainWindowTitle',
 }
 
 export enum menuOption {

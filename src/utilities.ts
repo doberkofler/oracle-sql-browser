@@ -6,10 +6,9 @@ export function getCurrentWindow(): BrowserWindow {
 }
 
 export function setMainWindowTitle(title: string): void {
-	const mainWindow = getCurrentWindow();
 	const fullTitle = 'Oracle SQL Browser' + (title.length > 0 ? ` - ${title}` : '');
 
-	mainWindow.setTitle(fullTitle);
+	ipcRenderer.send(channel.setMainWindowTitle, fullTitle);
 }
 
 export function isPackaged(): boolean {

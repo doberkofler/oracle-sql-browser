@@ -64,6 +64,7 @@ async function createWindow(): Promise<void> {
 	mainWindow.on('close', saveWindowStatus);
 
 	// ipc channel
+	ipcMain.on(channel.setMainWindowTitle, (event, title: string) => mainWindow.setTitle(title));
 	ipcMain.on(channel.appIsPackaged, event => event.returnValue = app.isPackaged);
 }
 
