@@ -1,4 +1,5 @@
-import {app, BrowserWindow, ipcMain} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain} from 'electron';
+import {initOracleClient} from './database';
 import {loadSettings, saveSettings} from './settings';
 import * as path from 'path';
 import {createApplicationMenu} from './applicationMenu';
@@ -15,6 +16,13 @@ if (require('electron-squirrel-startup')) {
 async function createWindow(): Promise<void> {
 	// load settings
 	const settings = await loadSettings();
+
+	// check, if the oracle libraries are available and oracledb can be initialized
+	const error = initOracleClient();
+	if (error !== '') {
+		dialog.showErrorBox('Fatal error', error);
+		app.exit(1);
+	}
 	
 	// Create the browser window.
 	const mainWindow = new BrowserWindow({

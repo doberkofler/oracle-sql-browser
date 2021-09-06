@@ -13,6 +13,26 @@ export type Oracle$ResultType = {
 	meta: Array<Oracle$MetaType>,
 };
 
+/*
+*	load and initialize the Oracle Client libraries
+*/
+export function initOracleClient(): string {
+	let libDir = '';
+
+	try {
+		libDir = !isPackaged() ? path.join(__dirname, '../instantclient_19_8') : path.join(process.resourcesPath, 'instantclient_19_8');
+	} catch (e) {
+		return `Unable to determine the location of the  Oracle Client libraries\n${e.message}`
+	}
+
+	try {
+		oracledb.initOracleClient({libDir});
+		return '';
+	} catch (e) {
+		return `Unable to find the Oracle Client libraries in the directory "${libDir}"`;
+	}
+}
+
 export class Database {
 	private connection: oracledb.Connection|null = null;
 
@@ -25,11 +45,8 @@ export class Database {
 		//	the column data is returned as a string instead of the default representation.
 		oracledb.fetchAsString = [oracledb.CLOB];
 
-		// This synchronous function loads and initializes the Oracle Client libraries that are necessary
-		//	for node-oracledb to communicate with Oracle Database.
-		oracledb.initOracleClient({
-			libDir: !isPackaged() ? path.join(__dirname, '../instantclient_19_8') : path.join(process.resourcesPath, 'instantclient_19_8')
-		});
+		// load and initialize the Oracle Client libraries
+		initOracleClient();
 	}
 
 	isConnected(): boolean {
